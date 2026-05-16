@@ -1,4 +1,5 @@
 export default function DocsIndex() {
+  // return <></>;
   return (
     <div className="space-y-8">
       <div>
@@ -22,9 +23,7 @@ export default function DocsIndex() {
         <div className="card bg-base-200 border border-base-300">
           <div className="card-body">
             <div className="flex items-center gap-4 flex-wrap">
-              <span className="badge badge-primary font-mono text-sm">
-                GET
-              </span>
+              <span className="badge badge-primary font-mono text-sm">GET</span>
               <span className="font-mono text-lg font-semibold">/profile</span>
               <span className="text-base-content/70 text-sm ml-auto">
                 Stream all videos from a TikTok profile
@@ -39,7 +38,10 @@ export default function DocsIndex() {
         <div className="bg-base-200 border border-base-300 rounded-lg p-4 space-y-3">
           <p className="text-base-content/70">
             All streaming endpoints return{" "}
-            <span className="badge badge-outline">application/x-ndjson</span> — one JSON object per line, sent as data arrives. This means your client starts receiving video entries immediately without waiting for the full profile to be scanned.
+            <span className="badge badge-outline">application/x-ndjson</span> —
+            one JSON object per line, sent as data arrives. This means your
+            client starts receiving video entries immediately without waiting
+            for the full profile to be scanned.
           </p>
         </div>
       </section>
@@ -56,4 +58,3 @@ export default function DocsIndex() {
     </div>
   );
 }
-

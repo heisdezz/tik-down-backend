@@ -4,9 +4,9 @@ import Footer from "../../components/Footer";
 
 export default function DocsLayout() {
   return (
-    <div className="flex flex-col min-h-screen bg-base-100">
+    <div className="flex flex-col min-h-screen bg-base-100 con">
       <Header />
-      <div className="flex flex-1">
+      <div className="flex flex-1 ">
         <aside className="w-64 shrink-0 border-r border-base-300 bg-base-100 overflow-y-auto">
           <nav className="p-6 flex flex-col gap-2">
             <p className="text-xs font-semibold text-base-content/60 uppercase tracking-widest mb-3">
@@ -50,4 +50,3 @@ export default function DocsLayout() {
     </div>
   );
 }
-
