@@ -1,8 +1,7 @@
 {
-  "buildCommand": "bun run build",
-  "installCommand": "bun install",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
   "outputDirectory": "build/client",
-  "bunVersion": "1.x",
   "routes": [
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/api/server" }
