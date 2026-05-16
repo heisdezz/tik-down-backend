@@ -3,11 +3,6 @@
   "installCommand": "bun install",
   "outputDirectory": "build/client",
   "bunVersion": "1.x",
-  "functions": {
-    "api/server.js": {
-      "runtime": "bun@1"
-    }
-  },
   "routes": [
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/api/server" }
