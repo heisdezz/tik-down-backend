@@ -1,11 +1,11 @@
 {
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
+  "buildCommand": "bun run build",
+  "installCommand": "bun install",
   "outputDirectory": "build/client",
+  "bunVersion": "1.x",
   "functions": {
     "api/server.js": {
-      "runtime": "node22",
-      "maxDuration": 60
+      "runtime": "bun"
     }
   },
   "routes": [
