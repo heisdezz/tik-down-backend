@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "react-router build",
+    "postinstall": "node scripts/setup-ytdlp.mjs",
+    "build": "node scripts/setup-ytdlp.mjs && react-router build",
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc"
@@ -14,7 +15,9 @@
     "isbot": "^5.1.36",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router": "7.15.1"
+    "react-router": "7.15.1",
+    "rr-next-routes": "^0.0.10",
+    "ytdlp-nodejs": "^3.4.4"
   },
   "devDependencies": {
     "@react-router/dev": "7.15.1",

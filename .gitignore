@@ -5,3 +5,6 @@
 # React Router
 /.react-router/
 /build/
+
+# yt-dlp binary (downloaded at build time)
+/bin/
