@@ -4,7 +4,7 @@
   "outputDirectory": "build/client",
   "functions": {
     "api/server.js": {
-      "runtime": "nodejs22.x",
+      "runtime": "node22",
       "maxDuration": 60
     }
   },
