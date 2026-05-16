@@ -82,49 +82,41 @@ Make sure to deploy the output of `npm run build`
 
 This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
 
-DaisyUI (Tailwind plugin)
+### DaisyUI (Tailwind Plugin)
 
-- Install with Bun:
+DaisyUI v5 is pre-installed. To use it, just import the plugin in your CSS:
 
-```bash
-bun add daisyui
+```css
+@import "tailwindcss";
+@plugin "daisyui";
 ```
 
-- Add DaisyUI to your Tailwind config (create `tailwind.config.cjs` if missing):
+This is already done in `app/app.css`. No config file needed—DaisyUI v5 works out of the box.
 
-```js
-module.exports = {
-  content: ['./index.html', './app/**/*.{js,ts,jsx,tsx}', './src/**/*.{js,ts,jsx,tsx}'],
-  theme: { extend: {} },
-  plugins: [require('daisyui')],
-};
-```
-
-If Tailwind is already working (see `app/app.css` importing `tailwindcss`), adding the `daisyui` plugin enables its utility classes and components.
-
-Routes (rr-next-routes)
+### Routes (rr-next-routes)
 
 This app uses React Router-style routes under `app/routes/` (rr-next-routes). Example: `app/routes/profile/index.tsx` exposes a loader that streams NDJSON using `yt-dlp` and returns `Content-Type: application/x-ndjson`.
 
 Client-side consumption example:
 
 ```js
-const res = await fetch('/routes/profile?u=@username');
+const res = await fetch('/profile?u=@username');
 const reader = res.body.getReader();
 const decoder = new TextDecoder();
-let { value, done } = await reader.read();
 let buffer = '';
-while (!done) {
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
   buffer += decoder.decode(value, { stream: true });
   const lines = buffer.split('\n');
   buffer = lines.pop() || '';
   for (const line of lines) {
     if (line.trim()) console.log(JSON.parse(line));
   }
-  ({ value, done } = await reader.read());
 }
-if (buffer.trim()) console.log(JSON.parse(buffer));
 ```
+
+See `app/routes/docs/` for full API documentation.
 
 ---
 
