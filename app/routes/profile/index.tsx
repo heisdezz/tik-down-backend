@@ -12,7 +12,9 @@ function getDownloadUrl(): string {
     return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64";
   if (process.arch === "arm")
     return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_armv7l";
-  return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
+  // yt-dlp_linux is the standalone PyInstaller build (no Python required)
+  // plain yt-dlp is a Python zipapp and needs python3 on PATH
+  return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
 }
 
 // On Vercel, process.cwd() (/var/task) is read-only. /tmp is the only writable dir.
