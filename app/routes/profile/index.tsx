@@ -76,7 +76,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     profileUrl = `https://www.tiktok.com/@${username}`;
   }
 
-  await ensureYtDlp();
+  try {
+    await ensureYtDlp();
+  } catch (err: any) {
+    console.error("[ensureYtDlp] failed:", err?.message ?? err);
+    return Response.json(
+      { error: "Failed to initialize yt-dlp", detail: err?.message ?? String(err) },
+      { status: 500 },
+    );
+  }
 
   const cacheKey = `${profileUrl}::${limit ?? ""}`;
   const cached = cache.get(cacheKey);
@@ -97,6 +105,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     } catch (err: any) {
       const msg: string = err?.message ?? "";
+      console.error("[yt-dlp probe] error:", msg);
       const isNotFound =
         msg.includes("does not exist") ||
         msg.includes("404") ||
@@ -105,6 +114,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return Response.json(
         {
           error: isNotFound ? "TikTok profile not found" : "Failed to reach TikTok",
+          detail: msg,
         },
         { status: isNotFound ? 404 : 502 },
       );
