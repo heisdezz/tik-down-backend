@@ -4,8 +4,16 @@ import { existsSync } from "fs";
 import { writeFile, chmod } from "fs/promises";
 import { join } from "path";
 
-const YT_DLP_DOWNLOAD_URL =
-  "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
+// Pick the right yt-dlp binary for the current platform/arch
+function getDownloadUrl(): string {
+  if (process.platform === "win32")
+    return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe";
+  if (process.arch === "arm64")
+    return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64";
+  if (process.arch === "arm")
+    return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_armv7l";
+  return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
+}
 
 // On Vercel, process.cwd() (/var/task) is read-only. /tmp is the only writable dir.
 const binaryPath =
@@ -13,19 +21,24 @@ const binaryPath =
     ? join(process.cwd(), "bin", "yt-dlp.exe")
     : "/tmp/yt-dlp";
 
-const ytdlp = new YtDlp({ binaryPath });
+// Defer instantiation until after the binary is confirmed present on disk.
+let ytdlp: YtDlp | null = null;
 
-// Lazily download the binary once per cold start; subsequent calls reuse the promise.
 let initPromise: Promise<void> | null = null;
 function ensureYtDlp(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
-      if (existsSync(binaryPath)) return;
-      const res = await fetch(YT_DLP_DOWNLOAD_URL);
-      if (!res.ok) throw new Error(`Failed to download yt-dlp: HTTP ${res.status}`);
-      const buf = await res.arrayBuffer();
-      await writeFile(binaryPath, Buffer.from(buf));
-      await chmod(binaryPath, 0o755);
+      if (!existsSync(binaryPath)) {
+        console.log(`[yt-dlp] downloading for ${process.platform}/${process.arch}…`);
+        const url = getDownloadUrl();
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Failed to download yt-dlp: HTTP ${res.status}`);
+        const buf = await res.arrayBuffer();
+        await writeFile(binaryPath, Buffer.from(buf));
+        await chmod(binaryPath, 0o755);
+        console.log("[yt-dlp] binary ready at", binaryPath);
+      }
+      ytdlp = new YtDlp({ binaryPath });
     })();
   }
   return initPromise;
@@ -95,7 +108,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Probe with a single item to confirm the profile exists before streaming
     let probeHit = false;
     try {
-      await ytdlp.execAsync(profileUrl, {
+      await ytdlp!.execAsync(profileUrl, {
         flatPlaylist: true,
         dumpJson: true,
         playlistEnd: 1,
