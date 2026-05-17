@@ -15,7 +15,8 @@ export default function ProfileTest() {
 
     try {
       const params = new URLSearchParams({ u: username });
-      if (limit) params.set("limit", limit);
+      const clampedLimit = Math.min(Number(limit) || 5, 50);
+      params.set("limit", String(clampedLimit));
 
       const res = await fetch(`/profile?${params}`);
       if (!res.ok) {
@@ -82,6 +83,7 @@ export default function ProfileTest() {
             className="input input-bordered w-24"
             type="number"
             min={1}
+            max={50}
             value={limit}
             onChange={(e) => setLimit(e.target.value)}
           />

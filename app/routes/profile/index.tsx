@@ -28,9 +28,30 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   let profileUrl: string;
 
   if (profile.startsWith("https://")) {
+    let parsed: URL;
+    try {
+      parsed = new URL(profile);
+    } catch {
+      return Response.json({ error: "Invalid URL" }, { status: 400 });
+    }
+    if (!parsed.hostname.endsWith("tiktok.com")) {
+      return Response.json(
+        { error: "URL must be a tiktok.com link" },
+        { status: 400 },
+      );
+    }
     profileUrl = profile;
   } else {
     const username = profile.startsWith("@") ? profile.slice(1) : profile;
+    if (!/^[a-zA-Z0-9_.]{1,24}$/.test(username)) {
+      return Response.json(
+        {
+          error:
+            "Invalid TikTok username — must be 1–24 characters (letters, numbers, _ or .)",
+        },
+        { status: 400 },
+      );
+    }
     profileUrl = `https://www.tiktok.com/@${username}`;
   }
 
@@ -38,6 +59,36 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const cached = cache.get(cacheKey);
 
   const encoder = new TextEncoder();
+
+  if (!cached || cached.expiresAt <= Date.now()) {
+    // Probe with a single item to confirm the profile exists before streaming
+    let probeHit = false;
+    try {
+      await ytdlp.execAsync(profileUrl, {
+        flatPlaylist: true,
+        dumpJson: true,
+        playlistEnd: 1,
+        onData: () => { probeHit = true; },
+      });
+    } catch (err: any) {
+      const msg: string = err?.message ?? "";
+      const isNotFound =
+        msg.includes("does not exist") ||
+        msg.includes("404") ||
+        msg.includes("not found") ||
+        msg.includes("Unable to find");
+      return Response.json(
+        { error: isNotFound ? "TikTok profile not found" : "Failed to reach TikTok" },
+        { status: isNotFound ? 404 : 502 },
+      );
+    }
+    if (!probeHit) {
+      return Response.json(
+        { error: "Profile exists but has no public videos" },
+        { status: 404 },
+      );
+    }
+  }
 
   if (cached && cached.expiresAt > Date.now()) {
     const stream = new ReadableStream({
