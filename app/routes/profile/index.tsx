@@ -165,6 +165,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         .execAsync(profileUrl, {
           flatPlaylist: true,
           dumpJson: true,
+          addHeaders: ["Referer:https://www.tiktok.com/", "Accept-Language:en-US,en;q=0.9"],
           ...(limit ? { playlistEnd: limit } : {}),
           onData: (chunk) => {
             buffer += chunk;
