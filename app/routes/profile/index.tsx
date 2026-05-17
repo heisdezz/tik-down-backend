@@ -1,14 +1,29 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { YtDlp } from "ytdlp-nodejs";
+import { YtDlp, helpers } from "ytdlp-nodejs";
+import { existsSync, copyFileSync, chmodSync } from "fs";
 import { join } from "path";
 
-const binaryPath = join(
-  process.cwd(),
-  "bin",
-  process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp",
-);
+// On Vercel, process.cwd() is read-only. /tmp is the only writable dir.
+const binaryPath =
+  process.platform === "win32"
+    ? join(process.cwd(), "bin", "yt-dlp.exe")
+    : "/tmp/yt-dlp";
 
 const ytdlp = new YtDlp({ binaryPath });
+
+// Lazily download the binary once per cold start; subsequent calls reuse the promise.
+let initPromise: Promise<void> | null = null;
+function ensureYtDlp(): Promise<void> {
+  if (!initPromise) {
+    initPromise = (async () => {
+      if (existsSync(binaryPath)) return;
+      const downloaded = await helpers.downloadYtDlp();
+      copyFileSync(downloaded, binaryPath);
+      chmodSync(binaryPath, 0o755);
+    })();
+  }
+  return initPromise;
+}
 
 const TTL = 5 * 60 * 1000;
 const cache = new Map<string, { lines: string[]; expiresAt: number }>();
@@ -55,6 +70,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     profileUrl = `https://www.tiktok.com/@${username}`;
   }
 
+  await ensureYtDlp();
+
   const cacheKey = `${profileUrl}::${limit ?? ""}`;
   const cached = cache.get(cacheKey);
 
@@ -68,7 +85,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         flatPlaylist: true,
         dumpJson: true,
         playlistEnd: 1,
-        onData: () => { probeHit = true; },
+        onData: () => {
+          probeHit = true;
+        },
       });
     } catch (err: any) {
       const msg: string = err?.message ?? "";
@@ -78,7 +97,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         msg.includes("not found") ||
         msg.includes("Unable to find");
       return Response.json(
-        { error: isNotFound ? "TikTok profile not found" : "Failed to reach TikTok" },
+        {
+          error: isNotFound ? "TikTok profile not found" : "Failed to reach TikTok",
+        },
         { status: isNotFound ? 404 : 502 },
       );
     }
@@ -131,7 +152,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             collected.push(buffer);
             controller.enqueue(encoder.encode(buffer + "\n"));
           }
-          cache.set(cacheKey, { lines: collected, expiresAt: Date.now() + TTL });
+          cache.set(cacheKey, {
+            lines: collected,
+            expiresAt: Date.now() + TTL,
+          });
           controller.close();
         })
         .catch((err) => controller.error(err));
