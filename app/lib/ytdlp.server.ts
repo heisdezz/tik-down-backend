@@ -16,7 +16,9 @@ function getDownloadUrl(): string {
 export const binaryPath =
   process.platform === "win32"
     ? join(process.cwd(), "bin", "yt-dlp.exe")
-    : "/tmp/yt-dlp";
+    : process.env.VERCEL
+      ? "/tmp/yt-dlp"
+      : join(process.cwd(), "bin", "yt-dlp");
 
 export let ytdlp: YtDlp | null = null;
 
