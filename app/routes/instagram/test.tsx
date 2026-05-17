@@ -2,23 +2,26 @@ import { useState } from "react";
 
 export default function InstagramTest() {
   const [username, setUsername] = useState("");
+  const [sessionId, setSessionId] = useState("");
   const [limit, setLimit] = useState("5");
   const [results, setResults] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const run = async () => {
-    if (!username) return;
+    if (!username || !sessionId) return;
     setResults([]);
     setError(null);
     setLoading(true);
 
     try {
-      const params = new URLSearchParams({ u: username });
       const clampedLimit = Math.min(Number(limit) || 5, 50);
-      params.set("limit", String(clampedLimit));
 
-      const res = await fetch(`/instagram?${params}`);
+      const res = await fetch("/instagram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ u: username, limit: clampedLimit, ig_session_id: sessionId }),
+      });
       if (!res.ok) {
         const body = await res.json();
         setError(body.detail ?? body.error ?? `HTTP ${res.status}`);
@@ -77,6 +80,18 @@ export default function InstagramTest() {
         </div>
         <div className="form-control">
           <label className="label">
+            <span className="label-text">Session ID</span>
+          </label>
+          <input
+            className="input input-bordered w-72"
+            placeholder="ig_session_id"
+            value={sessionId}
+            onChange={(e) => setSessionId(e.target.value)}
+            type="password"
+          />
+        </div>
+        <div className="form-control">
+          <label className="label">
             <span className="label-text">Limit</span>
           </label>
           <input
@@ -91,7 +106,7 @@ export default function InstagramTest() {
         <button
           className="btn btn-primary"
           onClick={run}
-          disabled={loading || !username}
+          disabled={loading || !username || !sessionId}
         >
           {loading ? (
             <span className="loading loading-spinner loading-sm" />

@@ -1,35 +1,46 @@
-import type { LoaderFunctionArgs } from "react-router";
-import { existsSync } from "fs";
+import type { ActionFunctionArgs } from "react-router";
 import { writeFile } from "fs/promises";
 import { ensureYtDlp, ytdlp } from "../../lib/ytdlp.server";
 
-const COOKIES_PATH = "/tmp/ig_cookies.txt";
 const TTL = 5 * 60 * 1000;
 const cache = new Map<string, { lines: string[]; expiresAt: number }>();
 
-async function ensureIgCookies() {
-  if (existsSync(COOKIES_PATH)) return;
-  const raw = process.env.ig_session_id;
-  if (!raw) throw new Error("ig_session_id env var is not set");
-  const sessionId = decodeURIComponent(raw);
-  const cookieFile = [
+async function writeCookies(sessionId: string): Promise<string> {
+  const path = `/tmp/ig_cookies_${Buffer.from(sessionId).toString("base64url").slice(0, 16)}.txt`;
+  const content = [
     "# Netscape HTTP Cookie File",
     `.instagram.com\tTRUE\t/\tTRUE\t2147483647\tsessionid\t${sessionId}`,
   ].join("\n");
-  await writeFile(COOKIES_PATH, cookieFile);
+  await writeFile(path, content);
+  return path;
 }
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { searchParams } = new URL(request.url);
-  const profile = searchParams.get("u");
-  const limit = Number(searchParams.get("limit")) || undefined;
+export const loader = async () =>
+  Response.json({ error: "Method not allowed — use POST" }, { status: 405 });
 
-  if (!profile) {
-    return Response.json(
-      { error: "Missing required query param: ?u=<username|url>" },
-      { status: 400 },
-    );
+export const action = async ({ request }: ActionFunctionArgs) => {
+  if (request.method !== "POST") {
+    return Response.json({ error: "Method not allowed" }, { status: 405 });
   }
+
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Request body must be JSON" }, { status: 400 });
+  }
+
+  const { u: profile, limit: rawLimit, ig_session_id } = body ?? {};
+  const limit = Number(rawLimit) || undefined;
+
+  if (!ig_session_id) {
+    return Response.json({ error: "Missing ig_session_id in body" }, { status: 400 });
+  }
+  if (!profile) {
+    return Response.json({ error: "Missing u in body" }, { status: 400 });
+  }
+
+  const sessionId = decodeURIComponent(String(ig_session_id));
 
   let profileUrl: string;
 
@@ -41,28 +52,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return Response.json({ error: "Invalid URL" }, { status: 400 });
     }
     if (!parsed.hostname.endsWith("instagram.com")) {
-      return Response.json(
-        { error: "URL must be an instagram.com link" },
-        { status: 400 },
-      );
+      return Response.json({ error: "URL must be an instagram.com link" }, { status: 400 });
     }
     profileUrl = profile;
   } else {
     const username = profile.startsWith("@") ? profile.slice(1) : profile;
     if (!/^[a-zA-Z0-9_.]{1,30}$/.test(username)) {
       return Response.json(
-        {
-          error:
-            "Invalid Instagram username — must be 1–30 characters (letters, numbers, _ or .)",
-        },
+        { error: "Invalid Instagram username — must be 1–30 characters (letters, numbers, _ or .)" },
         { status: 400 },
       );
     }
     profileUrl = `https://www.instagram.com/${username}/`;
   }
 
+  let cookiesPath: string;
   try {
-    await Promise.all([ensureYtDlp(), ensureIgCookies()]);
+    await ensureYtDlp();
+    cookiesPath = await writeCookies(sessionId);
   } catch (err: any) {
     console.error("[instagram init] failed:", err?.message ?? err);
     return Response.json(
@@ -71,7 +78,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     );
   }
 
-  const cacheKey = `instagram::${profileUrl}::${limit ?? ""}`;
+  const cacheKey = `instagram::${sessionId.slice(-8)}::${profileUrl}::${limit ?? ""}`;
   const cached = cache.get(cacheKey);
   const encoder = new TextEncoder();
 
@@ -82,7 +89,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         flatPlaylist: true,
         dumpJson: true,
         playlistEnd: 1,
-        cookies: COOKIES_PATH,
+        cookies: cookiesPath,
         onData: () => { probeHit = true; },
       });
     } catch (err: any) {
@@ -103,10 +110,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       );
     }
     if (!probeHit) {
-      return Response.json(
-        { error: "Profile exists but has no public posts" },
-        { status: 404 },
-      );
+      return Response.json({ error: "Profile exists but has no public posts" }, { status: 404 });
     }
   }
 
@@ -131,7 +135,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         .execAsync(profileUrl, {
           flatPlaylist: true,
           dumpJson: true,
-          cookies: COOKIES_PATH,
+          cookies: cookiesPath,
           ...(limit ? { playlistEnd: limit } : {}),
           onData: (chunk) => {
             buffer += chunk;
