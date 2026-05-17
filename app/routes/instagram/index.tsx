@@ -1,53 +1,23 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { YtDlp } from "ytdlp-nodejs";
 import { existsSync } from "fs";
-import { writeFile, chmod } from "fs/promises";
-import { join } from "path";
+import { writeFile } from "fs/promises";
+import { ensureYtDlp, ytdlp } from "../../lib/ytdlp.server";
 
-// Pick the right yt-dlp binary for the current platform/arch
-function getDownloadUrl(): string {
-  if (process.platform === "win32")
-    return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe";
-  if (process.arch === "arm64")
-    return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64";
-  if (process.arch === "arm")
-    return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_armv7l";
-  // yt-dlp_linux is the standalone PyInstaller build (no Python required)
-  // plain yt-dlp is a Python zipapp and needs python3 on PATH
-  return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
-}
-
-// On Vercel, process.cwd() (/var/task) is read-only. /tmp is the only writable dir.
-const binaryPath =
-  process.platform === "win32"
-    ? join(process.cwd(), "bin", "yt-dlp.exe")
-    : "/tmp/yt-dlp";
-
-// Defer instantiation until after the binary is confirmed present on disk.
-let ytdlp: YtDlp | null = null;
-
-let initPromise: Promise<void> | null = null;
-function ensureYtDlp(): Promise<void> {
-  if (!initPromise) {
-    initPromise = (async () => {
-      if (!existsSync(binaryPath)) {
-        console.log(`[yt-dlp] downloading for ${process.platform}/${process.arch}…`);
-        const url = getDownloadUrl();
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Failed to download yt-dlp: HTTP ${res.status}`);
-        const buf = await res.arrayBuffer();
-        await writeFile(binaryPath, Buffer.from(buf));
-        await chmod(binaryPath, 0o755);
-        console.log("[yt-dlp] binary ready at", binaryPath);
-      }
-      ytdlp = new YtDlp({ binaryPath });
-    })();
-  }
-  return initPromise;
-}
-
+const COOKIES_PATH = "/tmp/ig_cookies.txt";
 const TTL = 5 * 60 * 1000;
 const cache = new Map<string, { lines: string[]; expiresAt: number }>();
+
+async function ensureIgCookies() {
+  if (existsSync(COOKIES_PATH)) return;
+  const raw = process.env.ig_session_id;
+  if (!raw) throw new Error("ig_session_id env var is not set");
+  const sessionId = decodeURIComponent(raw);
+  const cookieFile = [
+    "# Netscape HTTP Cookie File",
+    `.instagram.com\tTRUE\t/\tTRUE\t2147483647\tsessionid\t${sessionId}`,
+  ].join("\n");
+  await writeFile(COOKIES_PATH, cookieFile);
+}
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { searchParams } = new URL(request.url);
@@ -70,65 +40,63 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } catch {
       return Response.json({ error: "Invalid URL" }, { status: 400 });
     }
-    if (!parsed.hostname.endsWith("tiktok.com")) {
+    if (!parsed.hostname.endsWith("instagram.com")) {
       return Response.json(
-        { error: "URL must be a tiktok.com link" },
+        { error: "URL must be an instagram.com link" },
         { status: 400 },
       );
     }
     profileUrl = profile;
   } else {
     const username = profile.startsWith("@") ? profile.slice(1) : profile;
-    if (!/^[a-zA-Z0-9_.]{1,24}$/.test(username)) {
+    if (!/^[a-zA-Z0-9_.]{1,30}$/.test(username)) {
       return Response.json(
         {
           error:
-            "Invalid TikTok username — must be 1–24 characters (letters, numbers, _ or .)",
+            "Invalid Instagram username — must be 1–30 characters (letters, numbers, _ or .)",
         },
         { status: 400 },
       );
     }
-    profileUrl = `https://www.tiktok.com/@${username}`;
+    profileUrl = `https://www.instagram.com/${username}/`;
   }
 
   try {
-    await ensureYtDlp();
+    await Promise.all([ensureYtDlp(), ensureIgCookies()]);
   } catch (err: any) {
-    console.error("[ensureYtDlp] failed:", err?.message ?? err);
+    console.error("[instagram init] failed:", err?.message ?? err);
     return Response.json(
-      { error: "Failed to initialize yt-dlp", detail: err?.message ?? String(err) },
+      { error: "Failed to initialize", detail: err?.message ?? String(err) },
       { status: 500 },
     );
   }
 
-  const cacheKey = `${profileUrl}::${limit ?? ""}`;
+  const cacheKey = `instagram::${profileUrl}::${limit ?? ""}`;
   const cached = cache.get(cacheKey);
-
   const encoder = new TextEncoder();
 
   if (!cached || cached.expiresAt <= Date.now()) {
-    // Probe with a single item to confirm the profile exists before streaming
     let probeHit = false;
     try {
       await ytdlp!.execAsync(profileUrl, {
         flatPlaylist: true,
         dumpJson: true,
         playlistEnd: 1,
-        onData: () => {
-          probeHit = true;
-        },
+        cookies: COOKIES_PATH,
+        onData: () => { probeHit = true; },
       });
     } catch (err: any) {
       const msg: string = err?.message ?? "";
-      console.error("[yt-dlp probe] error:", msg);
+      console.error("[instagram probe] error:", msg);
       const isNotFound =
         msg.includes("does not exist") ||
         msg.includes("404") ||
         msg.includes("not found") ||
-        msg.includes("Unable to find");
+        msg.includes("Unable to find") ||
+        msg.includes("login required");
       return Response.json(
         {
-          error: isNotFound ? "TikTok profile not found" : "Failed to reach TikTok",
+          error: isNotFound ? "Instagram profile not found or private" : "Failed to reach Instagram",
           detail: msg,
         },
         { status: isNotFound ? 404 : 502 },
@@ -136,7 +104,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
     if (!probeHit) {
       return Response.json(
-        { error: "Profile exists but has no public videos" },
+        { error: "Profile exists but has no public posts" },
         { status: 404 },
       );
     }
@@ -145,9 +113,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   if (cached && cached.expiresAt > Date.now()) {
     const stream = new ReadableStream({
       start(controller) {
-        for (const line of cached.lines) {
-          controller.enqueue(encoder.encode(line + "\n"));
-        }
+        for (const line of cached.lines) controller.enqueue(encoder.encode(line + "\n"));
         controller.close();
       },
     });
@@ -161,11 +127,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       let buffer = "";
       const collected: string[] = [];
 
-      ytdlp
+      ytdlp!
         .execAsync(profileUrl, {
           flatPlaylist: true,
           dumpJson: true,
-          addHeaders: ["Referer:https://www.tiktok.com/", "Accept-Language:en-US,en;q=0.9"],
+          cookies: COOKIES_PATH,
           ...(limit ? { playlistEnd: limit } : {}),
           onData: (chunk) => {
             buffer += chunk;
@@ -184,10 +150,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             collected.push(buffer);
             controller.enqueue(encoder.encode(buffer + "\n"));
           }
-          cache.set(cacheKey, {
-            lines: collected,
-            expiresAt: Date.now() + TTL,
-          });
+          cache.set(cacheKey, { lines: collected, expiresAt: Date.now() + TTL });
           controller.close();
         })
         .catch((err) => controller.error(err));

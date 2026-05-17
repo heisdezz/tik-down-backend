@@ -1,11 +1,10 @@
 export default function DocsIndex() {
-  // return <></>;
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-4xl font-bold mb-3">tik-down API</h1>
         <p className="text-lg text-base-content/70">
-          A REST API for fetching TikTok profile video metadata using yt-dlp.
+          A REST API for fetching social media profile video metadata using yt-dlp.
         </p>
       </div>
 
@@ -21,12 +20,19 @@ export default function DocsIndex() {
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold">Endpoints</h2>
         <div className="card bg-base-200 border border-base-300">
-          <div className="card-body">
-            <div className="flex items-center gap-4 flex-wrap">
+          <div className="card-body divide-y divide-base-300 p-0">
+            <div className="flex items-center gap-4 flex-wrap p-4">
               <span className="badge badge-primary font-mono text-sm">GET</span>
-              <span className="font-mono text-lg font-semibold">/profile</span>
+              <span className="font-mono text-lg font-semibold">/tiktok</span>
               <span className="text-base-content/70 text-sm ml-auto">
                 Stream all videos from a TikTok profile
+              </span>
+            </div>
+            <div className="flex items-center gap-4 flex-wrap p-4">
+              <span className="badge badge-secondary font-mono text-sm">GET</span>
+              <span className="font-mono text-lg font-semibold">/instagram</span>
+              <span className="text-base-content/70 text-sm ml-auto">
+                Stream all posts from an Instagram profile
               </span>
             </div>
           </div>
@@ -40,8 +46,8 @@ export default function DocsIndex() {
             All streaming endpoints return{" "}
             <span className="badge badge-outline">application/x-ndjson</span> —
             one JSON object per line, sent as data arrives. This means your
-            client starts receiving video entries immediately without waiting
-            for the full profile to be scanned.
+            client starts receiving entries immediately without waiting for the
+            full profile to be scanned.
           </p>
         </div>
       </section>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function ProfileTest() {
+export default function InstagramTest() {
   const [username, setUsername] = useState("");
   const [limit, setLimit] = useState("5");
   const [results, setResults] = useState<any[]>([]);
@@ -18,10 +18,10 @@ export default function ProfileTest() {
       const clampedLimit = Math.min(Number(limit) || 5, 50);
       params.set("limit", String(clampedLimit));
 
-      const res = await fetch(`/profile?${params}`);
+      const res = await fetch(`/instagram?${params}`);
       if (!res.ok) {
         const body = await res.json();
-        setError(body.error ?? `HTTP ${res.status}`);
+        setError(body.detail ?? body.error ?? `HTTP ${res.status}`);
         return;
       }
 
@@ -60,7 +60,7 @@ export default function ProfileTest() {
 
   return (
     <div className="container mx-auto py-6 max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold">Profile Endpoint Test</h1>
+      <h1 className="text-2xl font-bold">Instagram Endpoint Test</h1>
 
       <div className="flex gap-2 items-end flex-wrap">
         <div className="form-control">
@@ -110,7 +110,7 @@ export default function ProfileTest() {
       {results.length > 0 && (
         <div className="space-y-3">
           <p className="text-sm text-base-content/50">
-            {results.length} video{results.length !== 1 ? "s" : ""} streamed
+            {results.length} post{results.length !== 1 ? "s" : ""} streamed
           </p>
 
           {results.map((item, i) => {
@@ -124,19 +124,13 @@ export default function ProfileTest() {
                 key={i}
                 className="card card-side bg-base-200 shadow-sm overflow-hidden"
               >
-                {/* number badge */}
                 <div className="flex items-center justify-center w-10 shrink-0 bg-base-300 text-base-content/40 font-mono text-sm font-bold">
                   {i + 1}
                 </div>
 
-                {/* thumbnail */}
                 <figure className="w-24 shrink-0 bg-base-300">
                   {thumb ? (
-                    <img
-                      src={thumb}
-                      alt=""
-                      className="w-24 h-full object-cover"
-                    />
+                    <img src={thumb} alt="" className="w-24 h-full object-cover" />
                   ) : (
                     <div className="w-24 h-16 flex items-center justify-center text-base-content/20 text-xs">
                       no thumb
@@ -144,7 +138,6 @@ export default function ProfileTest() {
                   )}
                 </figure>
 
-                {/* info */}
                 <div className="card-body p-3 gap-1 min-w-0">
                   <p className="font-medium text-sm leading-snug line-clamp-2">
                     {item.title ?? item.id}

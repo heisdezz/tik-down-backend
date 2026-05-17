@@ -33,7 +33,7 @@ export default function ProfileDocs() {
       <div>
         <div className="flex items-center gap-3 mb-4">
           <Badge color="primary">GET</Badge>
-          <h1 className="text-4xl font-bold font-mono">/profile</h1>
+          <h1 className="text-4xl font-bold font-mono">/tiktok</h1>
         </div>
         <p className="text-lg text-base-content/70">
           Streams all video entries from a TikTok profile as NDJSON using
@@ -66,10 +66,10 @@ export default function ProfileDocs() {
 
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold">Example Requests</h2>
-        <Block>{`GET /profile?u=charlidamelio
-GET /profile?u=@charlidamelio
-GET /profile?u=https://www.tiktok.com/@charlidamelio
-GET /profile?u=charlidamelio&limit=30`}</Block>
+        <Block>{`GET /tiktok?u=charlidamelio
+GET /tiktok?u=@charlidamelio
+GET /tiktok?u=https://www.tiktok.com/@charlidamelio
+GET /tiktok?u=charlidamelio&limit=30`}</Block>
       </section>
 
       <section className="space-y-4">
@@ -101,7 +101,7 @@ GET /profile?u=charlidamelio&limit=30`}</Block>
         <p className="text-base-content/70">
           Read the response body as a stream and parse each line as JSON:
         </p>
-        <Block>{`const res = await fetch('/profile?u=charlidamelio');
+        <Block>{`const res = await fetch('/tiktok?u=charlidamelio');
 const reader = res.body.getReader();
 const decoder = new TextDecoder();
 let buf = '';

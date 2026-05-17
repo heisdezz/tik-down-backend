@@ -26,7 +26,7 @@ export default function DocsLayout() {
               Overview
             </NavLink>
             <NavLink
-              to="/docs/profile"
+              to="/docs/tiktok"
               className={({ isActive }) =>
                 `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
@@ -35,7 +35,19 @@ export default function DocsLayout() {
                 }`
               }
             >
-              GET /profile
+              GET /tiktok
+            </NavLink>
+            <NavLink
+              to="/docs/instagram"
+              className={({ isActive }) =>
+                `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-primary text-primary-content"
+                    : "text-base-content/70 hover:bg-base-200"
+                }`
+              }
+            >
+              GET /instagram
             </NavLink>
           </nav>
         </aside>
