@@ -1,9 +1,13 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { YtDlp, helpers } from "ytdlp-nodejs";
-import { existsSync, copyFileSync, chmodSync } from "fs";
+import { YtDlp } from "ytdlp-nodejs";
+import { existsSync } from "fs";
+import { writeFile, chmod } from "fs/promises";
 import { join } from "path";
 
-// On Vercel, process.cwd() is read-only. /tmp is the only writable dir.
+const YT_DLP_DOWNLOAD_URL =
+  "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
+
+// On Vercel, process.cwd() (/var/task) is read-only. /tmp is the only writable dir.
 const binaryPath =
   process.platform === "win32"
     ? join(process.cwd(), "bin", "yt-dlp.exe")
@@ -17,9 +21,11 @@ function ensureYtDlp(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
       if (existsSync(binaryPath)) return;
-      const downloaded = await helpers.downloadYtDlp();
-      copyFileSync(downloaded, binaryPath);
-      chmodSync(binaryPath, 0o755);
+      const res = await fetch(YT_DLP_DOWNLOAD_URL);
+      if (!res.ok) throw new Error(`Failed to download yt-dlp: HTTP ${res.status}`);
+      const buf = await res.arrayBuffer();
+      await writeFile(binaryPath, Buffer.from(buf));
+      await chmod(binaryPath, 0o755);
     })();
   }
   return initPromise;
