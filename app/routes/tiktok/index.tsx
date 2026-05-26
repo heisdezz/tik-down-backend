@@ -1,20 +1,49 @@
-import type { LoaderFunctionArgs } from "react-router";
+import type { ActionFunctionArgs } from "react-router";
+import { writeFile } from "fs/promises";
 import { ensureYtDlp, ytdlp } from "../../lib/ytdlp.server";
 
 const TTL = 5 * 60 * 1000;
 const cache = new Map<string, { lines: string[]; expiresAt: number }>();
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { searchParams } = new URL(request.url);
-  const profile = searchParams.get("u");
-  const limit = Number(searchParams.get("limit")) || undefined;
+async function writeCookies(sessionId: string): Promise<string> {
+  const path = `/tmp/tt_cookies_${Buffer.from(sessionId).toString("base64url").slice(0, 16)}.txt`;
+  const content = [
+    "# Netscape HTTP Cookie File",
+    `.tiktok.com\tTRUE\t/\tTRUE\t2147483647\tsessionid\t${sessionId}`,
+  ].join("\n");
+  await writeFile(path, content);
+  return path;
+}
 
-  if (!profile) {
+export const loader = async () =>
+  Response.json({ error: "Method not allowed — use POST" }, { status: 405 });
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  if (request.method !== "POST") {
+    return Response.json({ error: "Method not allowed" }, { status: 405 });
+  }
+
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Request body must be JSON" }, { status: 400 });
+  }
+
+  const { u: profile, limit: rawLimit, tt_session_id } = body ?? {};
+  const limit = Number(rawLimit) || undefined;
+
+  if (!tt_session_id) {
     return Response.json(
-      { error: "Missing required query param: ?u=<username|url>" },
-      { status: 400 },
+      { error: "cookies/session auth required — pass tt_session_id in body" },
+      { status: 401 },
     );
   }
+  if (!profile) {
+    return Response.json({ error: "Missing u in body" }, { status: 400 });
+  }
+
+  const sessionId = decodeURIComponent(String(tt_session_id));
 
   let profileUrl: string;
 
@@ -26,37 +55,33 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return Response.json({ error: "Invalid URL" }, { status: 400 });
     }
     if (!parsed.hostname.endsWith("tiktok.com")) {
-      return Response.json(
-        { error: "URL must be a tiktok.com link" },
-        { status: 400 },
-      );
+      return Response.json({ error: "URL must be a tiktok.com link" }, { status: 400 });
     }
     profileUrl = profile;
   } else {
     const username = profile.startsWith("@") ? profile.slice(1) : profile;
     if (!/^[a-zA-Z0-9_.]{1,24}$/.test(username)) {
       return Response.json(
-        {
-          error:
-            "Invalid TikTok username — must be 1–24 characters (letters, numbers, _ or .)",
-        },
+        { error: "Invalid TikTok username — must be 1–24 characters (letters, numbers, _ or .)" },
         { status: 400 },
       );
     }
     profileUrl = `https://www.tiktok.com/@${username}`;
   }
 
+  let cookiesPath: string;
   try {
     await ensureYtDlp();
+    cookiesPath = await writeCookies(sessionId);
   } catch (err: any) {
-    console.error("[ensureYtDlp] failed:", err?.message ?? err);
+    console.error("[tiktok init] failed:", err?.message ?? err);
     return Response.json(
       { error: "Failed to initialize yt-dlp", detail: err?.message ?? String(err) },
       { status: 500 },
     );
   }
 
-  const cacheKey = `tiktok::${profileUrl}::${limit ?? ""}`;
+  const cacheKey = `tiktok::${sessionId.slice(-8)}::${profileUrl}::${limit ?? ""}`;
   const cached = cache.get(cacheKey);
   const encoder = new TextEncoder();
 
@@ -67,6 +92,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         flatPlaylist: true,
         dumpJson: true,
         playlistEnd: 1,
+        cookies: cookiesPath,
         addHeaders: ["Referer:https://www.tiktok.com/", "Accept-Language:en-US,en;q=0.9"],
         onData: () => { probeHit = true; },
       });
@@ -112,6 +138,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         .execAsync(profileUrl, {
           flatPlaylist: true,
           dumpJson: true,
+          cookies: cookiesPath,
           addHeaders: ["Referer:https://www.tiktok.com/", "Accept-Language:en-US,en;q=0.9"],
           ...(limit ? { playlistEnd: limit } : {}),
           onData: (chunk) => {

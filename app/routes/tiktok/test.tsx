@@ -2,26 +2,29 @@ import { useState } from "react";
 
 export default function ProfileTest() {
   const [username, setUsername] = useState("");
+  const [sessionId, setSessionId] = useState("");
   const [limit, setLimit] = useState("5");
   const [results, setResults] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const run = async () => {
-    if (!username) return;
+    if (!username || !sessionId) return;
     setResults([]);
     setError(null);
     setLoading(true);
 
     try {
-      const params = new URLSearchParams({ u: username });
       const clampedLimit = Math.min(Number(limit) || 5, 50);
-      params.set("limit", String(clampedLimit));
 
-      const res = await fetch(`/tiktok?${params}`);
+      const res = await fetch("/tiktok", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ u: username, limit: clampedLimit, tt_session_id: sessionId }),
+      });
       if (!res.ok) {
         const body = await res.json();
-        setError(body.error ?? `HTTP ${res.status}`);
+        setError(body.detail ?? body.error ?? `HTTP ${res.status}`);
         return;
       }
 
@@ -60,7 +63,7 @@ export default function ProfileTest() {
 
   return (
     <div className="container mx-auto py-6 max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold">Profile Endpoint Test</h1>
+      <h1 className="text-2xl font-bold">TikTok Endpoint Test</h1>
 
       <div className="flex gap-2 items-end flex-wrap">
         <div className="form-control">
@@ -73,6 +76,18 @@ export default function ProfileTest() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && run()}
+          />
+        </div>
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">Session ID</span>
+          </label>
+          <input
+            className="input input-bordered w-72"
+            placeholder="tt_session_id"
+            type="password"
+            value={sessionId}
+            onChange={(e) => setSessionId(e.target.value)}
           />
         </div>
         <div className="form-control">
@@ -91,7 +106,7 @@ export default function ProfileTest() {
         <button
           className="btn btn-primary"
           onClick={run}
-          disabled={loading || !username}
+          disabled={loading || !username || !sessionId}
         >
           {loading ? (
             <span className="loading loading-spinner loading-sm" />

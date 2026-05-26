@@ -1,0 +1,263 @@
+{
+  "buildManifest": {
+    "serverBundles": {
+      "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0": {
+        "id": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+        "file": "build/server/nodejs_eyJydW50aW1lIjoibm9kZWpzIn0/index.js",
+        "config": {
+          "runtime": "nodejs"
+        }
+      }
+    },
+    "routeIdToServerBundleId": {
+      "routes/index": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/docs/index": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/docs/instagram": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/docs/tiktok": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/home": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/instagram/index": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/instagram/test": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/tiktok/index": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/tiktok/test": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0"
+    },
+    "routes": {
+      "root": {
+        "id": "root",
+        "file": "app/root.tsx",
+        "path": "",
+        "config": {}
+      },
+      "routes/index": {
+        "id": "routes/index",
+        "parentId": "root",
+        "file": "app/routes/index.tsx",
+        "index": true,
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/docs/_layout": {
+        "id": "routes/docs/_layout",
+        "parentId": "root",
+        "file": "app/routes/docs/_layout.tsx",
+        "config": {}
+      },
+      "routes/docs/index": {
+        "id": "routes/docs/index",
+        "parentId": "routes/docs/_layout",
+        "file": "app/routes/docs/index.tsx",
+        "path": "/docs",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/docs/instagram": {
+        "id": "routes/docs/instagram",
+        "parentId": "routes/docs/_layout",
+        "file": "app/routes/docs/instagram.tsx",
+        "path": "/docs/instagram",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/docs/tiktok": {
+        "id": "routes/docs/tiktok",
+        "parentId": "routes/docs/_layout",
+        "file": "app/routes/docs/tiktok.tsx",
+        "path": "/docs/tiktok",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/home": {
+        "id": "routes/home",
+        "parentId": "root",
+        "file": "app/routes/home.tsx",
+        "path": "/home",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/instagram/index": {
+        "id": "routes/instagram/index",
+        "parentId": "root",
+        "file": "app/routes/instagram/index.tsx",
+        "path": "/instagram",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/instagram/test": {
+        "id": "routes/instagram/test",
+        "parentId": "root",
+        "file": "app/routes/instagram/test.tsx",
+        "path": "/instagram/test",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/tiktok/index": {
+        "id": "routes/tiktok/index",
+        "parentId": "root",
+        "file": "app/routes/tiktok/index.tsx",
+        "path": "/tiktok",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/tiktok/test": {
+        "id": "routes/tiktok/test",
+        "parentId": "root",
+        "file": "app/routes/tiktok/test.tsx",
+        "path": "/tiktok/test",
+        "config": {
+          "runtime": "nodejs"
+        }
+      }
+    }
+  },
+  "reactRouterConfig": {
+    "appDirectory": "/home/destiny/Documents/projects/tik-down-backend/app",
+    "basename": "/",
+    "buildDirectory": "/home/destiny/Documents/projects/tik-down-backend/build",
+    "future": {
+      "unstable_optimizeDeps": false,
+      "v8_passThroughRequests": false,
+      "unstable_trailingSlashAwareDataRequests": false,
+      "unstable_previewServerPrerendering": false,
+      "v8_middleware": false,
+      "v8_splitRouteModules": false,
+      "v8_viteEnvironmentApi": false
+    },
+    "routes": {
+      "root": {
+        "id": "root",
+        "file": "root.tsx",
+        "path": ""
+      },
+      "routes/index": {
+        "id": "routes/index",
+        "parentId": "root",
+        "file": "routes/index.tsx",
+        "index": true
+      },
+      "routes/docs/_layout": {
+        "id": "routes/docs/_layout",
+        "parentId": "root",
+        "file": "routes/docs/_layout.tsx"
+      },
+      "routes/docs/index": {
+        "id": "routes/docs/index",
+        "parentId": "routes/docs/_layout",
+        "file": "routes/docs/index.tsx",
+        "path": "/docs"
+      },
+      "routes/docs/instagram": {
+        "id": "routes/docs/instagram",
+        "parentId": "routes/docs/_layout",
+        "file": "routes/docs/instagram.tsx",
+        "path": "/docs/instagram"
+      },
+      "routes/docs/tiktok": {
+        "id": "routes/docs/tiktok",
+        "parentId": "routes/docs/_layout",
+        "file": "routes/docs/tiktok.tsx",
+        "path": "/docs/tiktok"
+      },
+      "routes/home": {
+        "id": "routes/home",
+        "parentId": "root",
+        "file": "routes/home.tsx",
+        "path": "/home"
+      },
+      "routes/instagram/index": {
+        "id": "routes/instagram/index",
+        "parentId": "root",
+        "file": "routes/instagram/index.tsx",
+        "path": "/instagram"
+      },
+      "routes/instagram/test": {
+        "id": "routes/instagram/test",
+        "parentId": "root",
+        "file": "routes/instagram/test.tsx",
+        "path": "/instagram/test"
+      },
+      "routes/tiktok/index": {
+        "id": "routes/tiktok/index",
+        "parentId": "root",
+        "file": "routes/tiktok/index.tsx",
+        "path": "/tiktok"
+      },
+      "routes/tiktok/test": {
+        "id": "routes/tiktok/test",
+        "parentId": "root",
+        "file": "routes/tiktok/test.tsx",
+        "path": "/tiktok/test"
+      }
+    },
+    "routeDiscovery": {
+      "mode": "lazy",
+      "manifestPath": "/__manifest"
+    },
+    "serverBuildFile": "index.js",
+    "serverModuleFormat": "esm",
+    "ssr": true,
+    "subResourceIntegrity": false,
+    "allowedActionOrigins": false,
+    "unstable_routeConfig": [
+      {
+        "id": "root",
+        "path": "",
+        "file": "root.tsx",
+        "children": [
+          {
+            "file": "routes/index.tsx",
+            "index": true
+          },
+          {
+            "children": [
+              {
+                "file": "routes/docs/index.tsx",
+                "path": "/docs"
+              },
+              {
+                "file": "routes/docs/instagram.tsx",
+                "path": "/docs/instagram"
+              },
+              {
+                "file": "routes/docs/tiktok.tsx",
+                "path": "/docs/tiktok"
+              }
+            ],
+            "file": "routes/docs/_layout.tsx"
+          },
+          {
+            "file": "routes/home.tsx",
+            "path": "/home"
+          },
+          {
+            "file": "routes/instagram/index.tsx",
+            "path": "/instagram"
+          },
+          {
+            "file": "routes/instagram/test.tsx",
+            "path": "/instagram/test"
+          },
+          {
+            "file": "routes/tiktok/index.tsx",
+            "path": "/tiktok"
+          },
+          {
+            "file": "routes/tiktok/test.tsx",
+            "path": "/tiktok/test"
+          }
+        ]
+      }
+    ]
+  },
+  "viteConfig": {
+    "build": {
+      "assetsDir": "assets"
+    }
+  }
+}
