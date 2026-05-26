@@ -93,7 +93,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         dumpJson: true,
         playlistEnd: 1,
         cookies: cookiesPath,
-        addHeaders: ["Referer:https://www.tiktok.com/", "Accept-Language:en-US,en;q=0.9"],
+        addHeaders: { "Referer": "https://www.tiktok.com/", "Accept-Language": "en-US,en;q=0.9" },
         onData: () => { probeHit = true; },
       });
     } catch (err: any) {
@@ -139,7 +139,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           flatPlaylist: true,
           dumpJson: true,
           cookies: cookiesPath,
-          addHeaders: ["Referer:https://www.tiktok.com/", "Accept-Language:en-US,en;q=0.9"],
+          addHeaders: { "Referer": "https://www.tiktok.com/", "Accept-Language": "en-US,en;q=0.9" },
           ...(limit ? { playlistEnd: limit } : {}),
           onData: (chunk) => {
             buffer += chunk;
