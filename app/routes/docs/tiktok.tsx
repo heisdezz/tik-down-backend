@@ -60,9 +60,10 @@ export default function TikTokDocs() {
               </div>
               <div className="grid grid-cols-[150px_100px_1fr] gap-4 p-4 text-sm items-start">
                 <Code>tt_session_id</Code>
-                <Badge color="warning">required</Badge>
+                <Badge color="secondary">optional</Badge>
                 <span className="text-base-content/70">
-                  TikTok <Code>sessionid</Code> cookie value
+                  TikTok <Code>sessionid</Code> cookie value. Recommended to
+                  avoid captchas or rate limits.
                 </span>
               </div>
               <div className="grid grid-cols-[150px_100px_1fr] gap-4 p-4 text-sm items-start">
@@ -84,7 +85,6 @@ Content-Type: application/json
 
 {
   "u": "charlidamelio",
-  "tt_session_id": "abc123...",
   "limit": 20
 }`}</Block>
       </section>
@@ -94,7 +94,7 @@ Content-Type: application/json
         <Block>{`const res = await fetch('/tiktok', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ u: 'username', tt_session_id: '...', limit: 20 })
+  body: JSON.stringify({ u: 'username', limit: 20 })
 });
 
 const reader = res.body.getReader();
@@ -133,8 +133,7 @@ while (true) {
 Content-Type: application/json
 
 {
-  "u": "https://www.tiktok.com/@user/video/123456789",
-  "tt_session_id": "abc123..."
+  "u": "https://www.tiktok.com/@user/video/123456789"
 }`}</Block>
       </section>
     </div>

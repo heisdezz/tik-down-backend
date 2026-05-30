@@ -11,7 +11,7 @@ export default function ProfileTest() {
   const [loading, setLoading] = useState(false);
 
   const run = async () => {
-    if (!username || !sessionId) return;
+    if (!username) return;
     setResults([]);
     setSingleResult(null);
     setError(null);
@@ -151,7 +151,7 @@ export default function ProfileTest() {
         <button
           className="btn btn-primary"
           onClick={run}
-          disabled={loading || !username || !sessionId}
+          disabled={loading || !username}
         >
           {loading ? (
             <span className="loading loading-spinner loading-sm" />

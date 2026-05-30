@@ -24,53 +24,67 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     body = await request.json();
   } catch {
-    return Response.json({ error: "Request body must be JSON" }, { status: 400 });
+    return Response.json(
+      { error: "Request body must be JSON" },
+      { status: 400 },
+    );
   }
 
   const { u: url, tt_session_id } = body ?? {};
 
-  if (!tt_session_id) {
+  if (!url) {
     return Response.json(
-      { error: "cookies/session auth required — pass tt_session_id in body" },
-      { status: 401 },
+      { error: "Missing u (video URL) in body" },
+      { status: 400 },
     );
   }
-  if (!url) {
-    return Response.json({ error: "Missing u (video URL) in body" }, { status: 400 });
-  }
-
-  const sessionId = decodeURIComponent(String(tt_session_id));
 
   try {
     const parsed = new URL(url);
     if (!parsed.hostname.endsWith("tiktok.com")) {
-      return Response.json({ error: "URL must be a tiktok.com link" }, { status: 400 });
+      return Response.json(
+        { error: "URL must be a tiktok.com link" },
+        { status: 400 },
+      );
     }
   } catch {
     return Response.json({ error: "Invalid URL" }, { status: 400 });
   }
 
-  let cookiesPath: string;
+  let cookiesPath: string | undefined;
   try {
     await ensureYtDlp();
-    cookiesPath = await writeCookies(sessionId);
+    if (tt_session_id) {
+      const sessionId = decodeURIComponent(String(tt_session_id));
+      cookiesPath = await writeCookies(sessionId);
+    }
   } catch (err: any) {
     return Response.json(
-      { error: "Failed to initialize yt-dlp", detail: err?.message ?? String(err) },
+      {
+        error: "Failed to initialize yt-dlp",
+        detail: err?.message ?? String(err),
+      },
       { status: 500 },
     );
   }
 
   try {
     let resultJson = "";
-    await ytdlp!.execAsync(url, {
+    const options: any = {
       dumpJson: true,
-      cookies: cookiesPath,
-      addHeaders: { "Referer": "https://www.tiktok.com/", "Accept-Language": "en-US,en;q=0.9" },
-      onData: (chunk) => {
+      addHeaders: {
+        Referer: "https://www.tiktok.com/",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+      onData: (chunk: string) => {
         resultJson += chunk;
       },
-    });
+    };
+    if (cookiesPath) {
+      options.cookies = cookiesPath;
+    }
+
+    await ytdlp!.execAsync(url, options);
 
     if (!resultJson.trim()) {
       throw new Error("No data returned from yt-dlp");
@@ -81,7 +95,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   } catch (err: any) {
     console.error("[tiktok download] error:", err);
     return Response.json(
-      { error: "Failed to fetch video metadata", detail: err?.message ?? String(err) },
+      {
+        error: "Failed to fetch video metadata",
+        detail: err?.message ?? String(err),
+      },
       { status: 502 },
     );
   }

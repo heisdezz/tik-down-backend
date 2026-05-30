@@ -27,23 +27,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     body = await request.json();
   } catch {
-    return Response.json({ error: "Request body must be JSON" }, { status: 400 });
+    return Response.json(
+      { error: "Request body must be JSON" },
+      { status: 400 },
+    );
   }
 
   const { u: profile, limit: rawLimit, tt_session_id } = body ?? {};
   const limit = Number(rawLimit) || undefined;
 
-  if (!tt_session_id) {
-    return Response.json(
-      { error: "cookies/session auth required — pass tt_session_id in body" },
-      { status: 401 },
-    );
-  }
   if (!profile) {
     return Response.json({ error: "Missing u in body" }, { status: 400 });
   }
-
-  const sessionId = decodeURIComponent(String(tt_session_id));
 
   let profileUrl: string;
 
@@ -55,47 +50,68 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return Response.json({ error: "Invalid URL" }, { status: 400 });
     }
     if (!parsed.hostname.endsWith("tiktok.com")) {
-      return Response.json({ error: "URL must be a tiktok.com link" }, { status: 400 });
+      return Response.json(
+        { error: "URL must be a tiktok.com link" },
+        { status: 400 },
+      );
     }
     profileUrl = profile;
   } else {
     const username = profile.startsWith("@") ? profile.slice(1) : profile;
     if (!/^[a-zA-Z0-9_.]{1,24}$/.test(username)) {
       return Response.json(
-        { error: "Invalid TikTok username — must be 1–24 characters (letters, numbers, _ or .)" },
+        {
+          error:
+            "Invalid TikTok username — must be 1–24 characters (letters, numbers, _ or .)",
+        },
         { status: 400 },
       );
     }
     profileUrl = `https://www.tiktok.com/@${username}`;
   }
 
-  let cookiesPath: string;
+  let cookiesPath: string | undefined;
   try {
     await ensureYtDlp();
-    cookiesPath = await writeCookies(sessionId);
+    if (tt_session_id) {
+      const sessionId = decodeURIComponent(String(tt_session_id));
+      cookiesPath = await writeCookies(sessionId);
+    }
   } catch (err: any) {
     console.error("[tiktok init] failed:", err?.message ?? err);
     return Response.json(
-      { error: "Failed to initialize yt-dlp", detail: err?.message ?? String(err) },
+      {
+        error: "Failed to initialize yt-dlp",
+        detail: err?.message ?? String(err),
+      },
       { status: 500 },
     );
   }
 
-  const cacheKey = `tiktok::${sessionId.slice(-8)}::${profileUrl}::${limit ?? ""}`;
+  const cacheKey = `tiktok::${tt_session_id ? String(tt_session_id).slice(-8) : "anon"}::${profileUrl}::${limit ?? ""}`;
   const cached = cache.get(cacheKey);
   const encoder = new TextEncoder();
 
   if (!cached || cached.expiresAt <= Date.now()) {
     let probeHit = false;
     try {
-      await ytdlp!.execAsync(profileUrl, {
+      const options: any = {
         flatPlaylist: true,
         dumpJson: true,
         playlistEnd: 1,
-        cookies: cookiesPath,
-        addHeaders: { "Referer": "https://www.tiktok.com/", "Accept-Language": "en-US,en;q=0.9" },
-        onData: () => { probeHit = true; },
-      });
+        addHeaders: {
+          Referer: "https://www.tiktok.com/",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+        onData: () => {
+          probeHit = true;
+        },
+      };
+      if (cookiesPath) {
+        options.cookies = cookiesPath;
+      }
+
+      await ytdlp!.execAsync(profileUrl, options);
     } catch (err: any) {
       const msg: string = err?.message ?? "";
       console.error("[tiktok probe] error:", msg);
@@ -105,7 +121,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         msg.includes("not found") ||
         msg.includes("Unable to find");
       return Response.json(
-        { error: isNotFound ? "TikTok profile not found" : "Failed to reach TikTok", detail: msg },
+        {
+          error: isNotFound
+            ? "TikTok profile not found"
+            : "Failed to reach TikTok",
+          detail: msg,
+        },
         { status: isNotFound ? 404 : 502 },
       );
     }
@@ -120,7 +141,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (cached && cached.expiresAt > Date.now()) {
     const stream = new ReadableStream({
       start(controller) {
-        for (const line of cached.lines) controller.enqueue(encoder.encode(line + "\n"));
+        for (const line of cached.lines)
+          controller.enqueue(encoder.encode(line + "\n"));
         controller.close();
       },
     });
@@ -134,31 +156,41 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       let buffer = "";
       const collected: string[] = [];
 
-      ytdlp!
-        .execAsync(profileUrl, {
-          flatPlaylist: true,
-          dumpJson: true,
-          cookies: cookiesPath,
-          addHeaders: { "Referer": "https://www.tiktok.com/", "Accept-Language": "en-US,en;q=0.9" },
-          ...(limit ? { playlistEnd: limit } : {}),
-          onData: (chunk) => {
-            buffer += chunk;
-            const lines = buffer.split("\n");
-            buffer = lines.pop() ?? "";
-            for (const line of lines) {
-              if (line.trim()) {
-                collected.push(line);
-                controller.enqueue(encoder.encode(line + "\n"));
-              }
+      const options: any = {
+        flatPlaylist: true,
+        dumpJson: true,
+        addHeaders: {
+          Referer: "https://www.tiktok.com/",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+        ...(limit ? { playlistEnd: limit } : {}),
+        onData: (chunk: string) => {
+          buffer += chunk;
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            if (line.trim()) {
+              collected.push(line);
+              controller.enqueue(encoder.encode(line + "\n"));
             }
-          },
-        })
+          }
+        },
+      };
+      if (cookiesPath) {
+        options.cookies = cookiesPath;
+      }
+
+      ytdlp!
+        .execAsync(profileUrl, options)
         .then(() => {
           if (buffer.trim()) {
             collected.push(buffer);
             controller.enqueue(encoder.encode(buffer + "\n"));
           }
-          cache.set(cacheKey, { lines: collected, expiresAt: Date.now() + TTL });
+          cache.set(cacheKey, {
+            lines: collected,
+            expiresAt: Date.now() + TTL,
+          });
           controller.close();
         })
         .catch((err) => controller.error(err));
