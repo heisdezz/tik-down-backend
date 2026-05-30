@@ -1,51 +1,72 @@
 import { useState } from "react";
 
 export default function ProfileTest() {
+  const [mode, setMode] = useState<"profile" | "single">("profile");
   const [username, setUsername] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [limit, setLimit] = useState("5");
   const [results, setResults] = useState<any[]>([]);
+  const [singleResult, setSingleResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const run = async () => {
     if (!username || !sessionId) return;
     setResults([]);
+    setSingleResult(null);
     setError(null);
     setLoading(true);
 
     try {
-      const clampedLimit = Math.min(Number(limit) || 5, 50);
+      if (mode === "profile") {
+        const clampedLimit = Math.min(Number(limit) || 5, 50);
 
-      const res = await fetch("/tiktok", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ u: username, limit: clampedLimit, tt_session_id: sessionId }),
-      });
-      if (!res.ok) {
-        const body = await res.json();
-        setError(body.detail ?? body.error ?? `HTTP ${res.status}`);
-        return;
-      }
+        const res = await fetch("/tiktok", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            u: username,
+            limit: clampedLimit,
+            tt_session_id: sessionId,
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json();
+          setError(body.detail ?? body.error ?? `HTTP ${res.status}`);
+          return;
+        }
 
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split("\n");
-        buf = lines.pop() ?? "";
-        for (const line of lines) {
-          if (line.trim()) {
-            try {
-              setResults((prev) => [...prev, JSON.parse(line)]);
-            } catch {
-              // skip malformed lines
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split("\n");
+          buf = lines.pop() ?? "";
+          for (const line of lines) {
+            if (line.trim()) {
+              try {
+                setResults((prev) => [...prev, JSON.parse(line)]);
+              } catch {
+                // skip malformed lines
+              }
             }
           }
+        }
+      } else {
+        const res = await fetch("/tiktok/download", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ u: username, tt_session_id: sessionId }),
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          setError(body.detail ?? body.error ?? `HTTP ${res.status}`);
+        } else {
+          setSingleResult(body);
         }
       }
     } catch (e: any) {
@@ -63,16 +84,38 @@ export default function ProfileTest() {
 
   return (
     <div className="container mx-auto py-6 max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold">TikTok Endpoint Test</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">TikTok Endpoint Test</h1>
+        <div className="tabs tabs-boxed">
+          <button
+            className={`tab ${mode === "profile" ? "tab-active" : ""}`}
+            onClick={() => setMode("profile")}
+          >
+            Profile
+          </button>
+          <button
+            className={`tab ${mode === "single" ? "tab-active" : ""}`}
+            onClick={() => setMode("single")}
+          >
+            Single Video
+          </button>
+        </div>
+      </div>
 
       <div className="flex gap-2 items-end flex-wrap">
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Username / URL</span>
+            <span className="label-text">
+              {mode === "profile" ? "Username / URL" : "Video URL"}
+            </span>
           </label>
           <input
             className="input input-bordered w-72"
-            placeholder="@username or full URL"
+            placeholder={
+              mode === "profile"
+                ? "@username or full URL"
+                : "https://tiktok.com/..."
+            }
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && run()}
@@ -90,19 +133,21 @@ export default function ProfileTest() {
             onChange={(e) => setSessionId(e.target.value)}
           />
         </div>
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text">Limit</span>
-          </label>
-          <input
-            className="input input-bordered w-24"
-            type="number"
-            min={1}
-            max={50}
-            value={limit}
-            onChange={(e) => setLimit(e.target.value)}
-          />
-        </div>
+        {mode === "profile" && (
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Limit</span>
+            </label>
+            <input
+              className="input input-bordered w-24"
+              type="number"
+              min={1}
+              max={50}
+              value={limit}
+              onChange={(e) => setLimit(e.target.value)}
+            />
+          </div>
+        )}
         <button
           className="btn btn-primary"
           onClick={run}
@@ -119,6 +164,33 @@ export default function ProfileTest() {
       {error && (
         <div className="alert alert-error">
           <span>{error}</span>
+        </div>
+      )}
+
+      {singleResult && (
+        <div className="card bg-base-200 shadow-sm">
+          <div className="card-body">
+            <h2 className="card-title text-sm">
+              {singleResult.title || singleResult.id}
+            </h2>
+            <div className="mockup-code text-xs max-h-96 overflow-auto">
+              <pre>
+                <code>{JSON.stringify(singleResult, null, 2)}</code>
+              </pre>
+            </div>
+            {singleResult.url && (
+              <div className="card-actions justify-end mt-4">
+                <a
+                  href={singleResult.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-sm btn-primary"
+                >
+                  Open Download URL
+                </a>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

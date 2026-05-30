@@ -1,11 +1,17 @@
-function Badge({ children, color = "primary" }: { children: string; color?: "primary" | "secondary" | "warning" }) {
+function Badge({
+  children,
+  color = "primary",
+}: {
+  children: string;
+  color?: "primary" | "secondary" | "warning";
+}) {
   const variants = {
     primary: "badge badge-primary",
     secondary: "badge badge-secondary",
     warning: "badge badge-warning",
   };
   return (
-    <span className={`${variants[color]} font-mono text-xs`}>
+    <span className={`${variants[color]} font-mono text-xs shrink-0`}>
       {children}
     </span>
   );
@@ -13,7 +19,7 @@ function Badge({ children, color = "primary" }: { children: string; color?: "pri
 
 function Code({ children }: { children: string }) {
   return (
-    <code className="text-xs bg-base-200 text-base-content/80 px-2 py-1 rounded font-mono border border-base-300">
+    <code className="text-xs bg-base-200 text-base-content/80 px-2 py-1 rounded font-mono border border-base-300 break-all">
       {children}
     </code>
   );
@@ -27,81 +33,70 @@ function Block({ children }: { children: string }) {
   );
 }
 
-export default function ProfileDocs() {
+export default function TikTokDocs() {
   return (
     <div className="space-y-12">
       <div>
         <div className="flex items-center gap-3 mb-4">
-          <Badge color="primary">GET</Badge>
-          <h1 className="text-4xl font-bold font-mono">/tiktok</h1>
+          <Badge color="primary">POST</Badge>
+          <h1 className="text-3xl md:text-4xl font-bold font-mono">/tiktok</h1>
         </div>
         <p className="text-lg text-base-content/70">
-          Streams all video entries from a TikTok profile as NDJSON using
-          yt-dlp flat-playlist.
+          Streams video metadata from a TikTok profile as NDJSON.
         </p>
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">Query Parameters</h2>
+        <h2 className="text-2xl font-semibold">Request Body</h2>
         <div className="card bg-base-200 border border-base-300">
-          <div className="card-body divide-y divide-base-300 p-0">
-            <div className="grid grid-cols-[150px_120px_1fr] gap-4 p-4 text-sm items-start">
-              <Code>u</Code>
-              <Badge color="warning">required</Badge>
-              <span className="text-base-content/70">
-                TikTok username, <Code>@username</Code>, or full profile URL
-              </span>
-            </div>
-            <div className="grid grid-cols-[150px_120px_1fr] gap-4 p-4 text-sm items-start">
-              <Code>limit</Code>
-              <Badge color="secondary">optional</Badge>
-              <span className="text-base-content/70">
-                Max number of videos to return. Fetches the most recent{" "}
-                <Code>N</Code> videos. Omit to get all.
-              </span>
+          <div className="card-body divide-y divide-base-300 p-0 overflow-x-auto">
+            <div className="min-w-[500px]">
+              <div className="grid grid-cols-[150px_100px_1fr] gap-4 p-4 text-sm items-start">
+                <Code>u</Code>
+                <Badge color="warning">required</Badge>
+                <span className="text-base-content/70">
+                  Username, <Code>@username</Code>, or full profile URL
+                </span>
+              </div>
+              <div className="grid grid-cols-[150px_100px_1fr] gap-4 p-4 text-sm items-start">
+                <Code>tt_session_id</Code>
+                <Badge color="warning">required</Badge>
+                <span className="text-base-content/70">
+                  TikTok <Code>sessionid</Code> cookie value
+                </span>
+              </div>
+              <div className="grid grid-cols-[150px_100px_1fr] gap-4 p-4 text-sm items-start">
+                <Code>limit</Code>
+                <Badge color="secondary">optional</Badge>
+                <span className="text-base-content/70">
+                  Max videos to return (Recommended max: 50)
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">Example Requests</h2>
-        <Block>{`GET /tiktok?u=charlidamelio
-GET /tiktok?u=@charlidamelio
-GET /tiktok?u=https://www.tiktok.com/@charlidamelio
-GET /tiktok?u=charlidamelio&limit=30`}</Block>
-      </section>
+        <h2 className="text-2xl font-semibold">Example Request</h2>
+        <Block>{`POST /tiktok
+Content-Type: application/json
 
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">Response</h2>
-        <p className="text-base-content/70">
-          Returns <Code>application/x-ndjson</Code>. Each line is a
-          self-contained JSON object representing one video entry, emitted as
-          yt-dlp discovers it.
-        </p>
-        <Block>{`{"id":"7123456789","title":"some video","webpage_url":"https://www.tiktok.com/@user/video/7123456789","thumbnail":"https://...","duration":15,"uploader":"charlidamelio",...}
-{"id":"7123456788","title":"another video","webpage_url":"https://...","thumbnail":"https://...","duration":30,...}
-...`}</Block>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">Error Responses</h2>
-        <div className="card bg-base-200 border border-base-300">
-          <div className="card-body p-0">
-            <div className="grid grid-cols-[80px_1fr] gap-4 p-4 text-sm">
-              <Code>400</Code>
-              <span className="text-base-content/70">Missing <Code>?u=</Code> parameter</span>
-            </div>
-          </div>
-        </div>
+{
+  "u": "charlidamelio",
+  "tt_session_id": "abc123...",
+  "limit": 20
+}`}</Block>
       </section>
 
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold">Consuming the Stream</h2>
-        <p className="text-base-content/70">
-          Read the response body as a stream and parse each line as JSON:
-        </p>
-        <Block>{`const res = await fetch('/tiktok?u=charlidamelio');
+        <Block>{`const res = await fetch('/tiktok', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ u: 'username', tt_session_id: '...', limit: 20 })
+});
+
 const reader = res.body.getReader();
 const decoder = new TextDecoder();
 let buf = '';
@@ -118,11 +113,30 @@ while (true) {
 }`}</Block>
       </section>
 
-      <div className="alert alert-info">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-6 w-6 shrink-0 stroke-current"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        <span>Streaming is ideal for large profiles. Start processing videos as they arrive without loading the entire profile into memory.</span>
+      <div className="divider" id="tiktok-download"></div>
+
+      <div>
+        <div className="flex items-center gap-3 mb-4">
+          <Badge color="primary">POST</Badge>
+          <h1 className="text-3xl md:text-4xl font-bold font-mono break-all">
+            /tiktok/download
+          </h1>
+        </div>
+        <p className="text-lg text-base-content/70">
+          Fetches full metadata and download URLs for a single TikTok video.
+        </p>
       </div>
+
+      <section className="space-y-4">
+        <h2 className="text-2xl font-semibold">Example Request</h2>
+        <Block>{`POST /tiktok/download
+Content-Type: application/json
+
+{
+  "u": "https://www.tiktok.com/@user/video/123456789",
+  "tt_session_id": "abc123..."
+}`}</Block>
+      </section>
     </div>
   );
 }
-

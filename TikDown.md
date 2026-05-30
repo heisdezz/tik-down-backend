@@ -62,9 +62,33 @@ Content-Type: application/json
 }
 ```
 
+### `POST /tiktok/download`
+
+Fetches full metadata and download URLs for a single TikTok video.
+Returns a single JSON object (not streamed).
+
+#### Request Body (JSON)
+
+| Field           | Required | Description |
+|-----------------|----------|-------------|
+| `u`             | Yes      | Full TikTok video URL |
+| `tt_session_id` | Yes      | TikTok `sessionid` cookie value |
+
+#### Example
+
+```
+POST /tiktok/download
+Content-Type: application/json
+
+{
+  "u": "https://www.tiktok.com/@charlidamelio/video/1234567890",
+  "tt_session_id": "abc123..."
+}
+```
+
 ---
 
-## Response Format (both endpoints)
+## Response Format (streaming endpoints)
 
 - **Content-Type:** `application/x-ndjson`
 - **X-Cache:** `HIT` or `MISS` (5-minute server-side cache)
@@ -287,6 +311,45 @@ func fetchInstagram(username: String, sessionId: String, limit: Int = 20) async 
         else { continue }
         // append to your @Published array
     }
+}
+```
+
+---
+
+## Fetching Single Video (Non-Streaming)
+
+For `POST /tiktok/download`, the response is a single JSON object containing full metadata and all available formats/URLs.
+
+### JavaScript
+
+```js
+async function fetchVideoDownload(videoUrl, sessionId) {
+  const res = await fetch('https://tik-down-backend.vercel.app/tiktok/download', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ u: videoUrl, tt_session_id: sessionId }),
+  });
+
+  if (!res.ok) throw new Error((await res.json()).error);
+  const data = await res.json();
+  console.log('Download URL:', data.url);
+  return data;
+}
+```
+
+### Dart / Flutter
+
+```dart
+Future<Map<String, dynamic>> fetchVideoDownload(String url, String sessionId) async {
+  final uri = Uri.https('tik-down-backend.vercel.app', '/tiktok/download');
+  final res = await http.post(
+    uri,
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'u': url, 'tt_session_id': sessionId}),
+  );
+
+  if (res.statusCode != 200) throw Exception(jsonDecode(res.body)['error']);
+  return jsonDecode(res.body);
 }
 ```
 
