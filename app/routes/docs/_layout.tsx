@@ -64,6 +64,19 @@ export default function DocsLayout() {
       >
         POST /instagram
       </NavLink>
+      <NavLink
+        to="/docs/facebook"
+        onClick={() => setIsMenuOpen(false)}
+        className={({ isActive }) =>
+          `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            isActive
+              ? "bg-primary text-primary-content"
+              : "text-base-content/70 hover:bg-base-200"
+          }`
+        }
+      >
+        POST /facebook
+      </NavLink>
     </>
   );
 

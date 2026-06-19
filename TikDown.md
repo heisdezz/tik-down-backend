@@ -88,6 +88,32 @@ Content-Type: application/json
 
 ---
 
+### `POST /facebook`
+
+Fetches full metadata and download URLs for a single Facebook video.
+Returns a single JSON object (not streamed).
+
+#### Request Body (JSON)
+
+| Field        | Required | Description |
+|--------------|----------|-------------|
+| `u`          | Yes      | Full Facebook video URL (`facebook.com` or `fb.watch`) |
+| `fb_cookies` | No       | Raw cookie header string from a logged-in browser session (e.g. `"c_user=...; xs=...; datr=..."`). Only needed for private/restricted videos. |
+
+#### Example
+
+```
+POST /facebook
+Content-Type: application/json
+
+{
+  "u": "https://www.facebook.com/watch/?v=1234567890",
+  "fb_cookies": "c_user=100012345; xs=1%3Aabc123..."
+}
+```
+
+---
+
 ## Response Format (streaming endpoints)
 
 - **Content-Type:** `application/x-ndjson`
@@ -118,11 +144,11 @@ Content-Type: application/json
 | Status | Condition |
 |--------|-----------|
 | `400`  | Missing or invalid `u` / malformed body |
-| `401`  | Missing session cookie (`tt_session_id` / `ig_session_id`) |
+| `401`  | Missing session cookie (`tt_session_id` / `ig_session_id`), or Facebook video is private and needs `fb_cookies` |
 | `404`  | Profile not found / no public posts |
 | `405`  | Wrong HTTP method (GET on these routes) |
 | `500`  | yt-dlp failed to initialize |
-| `502`  | Could not reach TikTok / Instagram |
+| `502`  | Could not reach TikTok / Instagram / Facebook |
 
 ---
 
@@ -318,7 +344,7 @@ func fetchInstagram(username: String, sessionId: String, limit: Int = 20) async 
 
 ## Fetching Single Video (Non-Streaming)
 
-For `POST /tiktok/download`, the response is a single JSON object containing full metadata and all available formats/URLs.
+For `POST /tiktok/download` and `POST /facebook`, the response is a single JSON object containing full metadata and all available formats/URLs.
 
 ### JavaScript
 
@@ -335,6 +361,19 @@ async function fetchVideoDownload(videoUrl, sessionId) {
   console.log('Download URL:', data.url);
   return data;
 }
+
+async function fetchFacebookVideo(videoUrl, cookies) {
+  const res = await fetch('https://tik-down-backend.vercel.app/facebook', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ u: videoUrl, ...(cookies ? { fb_cookies: cookies } : {}) }),
+  });
+
+  if (!res.ok) throw new Error((await res.json()).error);
+  const data = await res.json();
+  console.log('Formats:', data.formats);
+  return data;
+}
 ```
 
 ### Dart / Flutter
@@ -346,6 +385,18 @@ Future<Map<String, dynamic>> fetchVideoDownload(String url, String sessionId) as
     uri,
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({'u': url, 'tt_session_id': sessionId}),
+  );
+
+  if (res.statusCode != 200) throw Exception(jsonDecode(res.body)['error']);
+  return jsonDecode(res.body);
+}
+
+Future<Map<String, dynamic>> fetchFacebookVideo(String url, {String? cookies}) async {
+  final uri = Uri.https('tik-down-backend.vercel.app', '/facebook');
+  final res = await http.post(
+    uri,
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'u': url, if (cookies != null) 'fb_cookies': cookies}),
   );
 
   if (res.statusCode != 200) throw Exception(jsonDecode(res.body)['error']);
@@ -371,5 +422,7 @@ Future<Map<String, dynamic>> fetchVideoDownload(String url, String sessionId) as
 | Instagram username | 1–30 chars, `[a-zA-Z0-9_.]` |
 | `@username` | Leading `@` stripped before validation |
 | Full URL | Must parse as valid URL with matching platform hostname |
+| Facebook URL | Hostname must end in `facebook.com` or `fb.watch` |
+| `fb_cookies` | Raw `name=value; name2=value2` cookie string, parsed into a Netscape cookie file |
 | `limit` | Optional integer, recommended max **50** |
 | Session IDs | URL-encoded values decoded automatically |

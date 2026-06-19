@@ -53,6 +53,17 @@ export default function DocsIndex() {
                 Stream posts from an Instagram profile
               </span>
             </div>
+            <div className="flex items-center gap-4 flex-wrap p-4">
+              <span className="badge badge-secondary font-mono text-sm">
+                POST
+              </span>
+              <span className="font-mono text-lg font-semibold">
+                /facebook
+              </span>
+              <span className="text-base-content/70 text-sm md:ml-auto w-full md:w-auto">
+                Get download URL for a single Facebook video
+              </span>
+            </div>
           </div>
         </div>
       </section>
