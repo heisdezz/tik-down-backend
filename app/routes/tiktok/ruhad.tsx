@@ -31,25 +31,28 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Dynamic import keeps the server-only package out of the client bundle.
     const { alldl } = await import("rahad-all-downloader-v2");
     const result = await alldl.tiktok(url);
-    return Response.json(result);
+    const html = typeof result === "string" ? result : JSON.stringify(result);
+    return new Response(html, {
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
   } catch (err: any) {
     console.error("[ruhad tiktok] error:", err);
-    return Response.json(
-      { error: "Failed to fetch video", detail: err?.message ?? String(err) },
-      { status: 502 },
+    return new Response(
+      `<div style="color:red">Failed to fetch video: ${err?.message ?? String(err)}</div>`,
+      { status: 502, headers: { "Content-Type": "text/html; charset=utf-8" } },
     );
   }
 };
 
 export default function RuhadTikTokTest() {
   const [url, setUrl] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const run = async () => {
     if (!url) return;
-    setResult(null);
+    setHtml(null);
     setError(null);
     setLoading(true);
 
@@ -59,25 +62,18 @@ export default function RuhadTikTokTest() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ u: url }),
       });
-      const body = await res.json();
+      const text = await res.text();
       if (!res.ok) {
-        setError(body.detail ?? body.error ?? `HTTP ${res.status}`);
+        setError(text || `HTTP ${res.status}`);
         return;
       }
-      setResult(body);
+      setHtml(text);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
   };
-
-  // The package returns a { data, metadata } shape; dig out common fields defensively.
-  const data = result?.data ?? result;
-  const videoUrl =
-    data?.videoUrl ?? data?.video ?? data?.url ?? data?.play ?? data?.hdplay;
-  const thumb = data?.thumbnail ?? data?.cover ?? data?.thumb;
-  const title = data?.title ?? data?.desc ?? data?.caption;
 
   return (
     <div className="container mx-auto py-6 max-w-3xl space-y-6">
@@ -115,57 +111,11 @@ export default function RuhadTikTokTest() {
         </div>
       )}
 
-      {result && (
-        <div className="space-y-4">
-          <div className="card card-side bg-base-200 shadow-sm overflow-hidden">
-            <figure className="w-40 shrink-0 bg-base-300">
-              {thumb ? (
-                <img src={thumb} alt="" className="w-40 h-full object-cover" />
-              ) : (
-                <div className="w-40 h-24 flex items-center justify-center text-base-content/20 text-xs">
-                  no thumb
-                </div>
-              )}
-            </figure>
-            <div className="card-body p-4 gap-2 min-w-0">
-              {title && (
-                <p className="font-medium text-sm leading-snug line-clamp-3">
-                  {title}
-                </p>
-              )}
-              {videoUrl ? (
-                <div className="flex gap-2 flex-wrap">
-                  <a
-                    href={videoUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn btn-sm btn-primary"
-                  >
-                    Open video
-                  </a>
-                  <a href={videoUrl} download className="btn btn-sm btn-outline">
-                    Download
-                  </a>
-                </div>
-              ) : (
-                <p className="text-xs text-base-content/50">
-                  No video URL in response — see raw JSON.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <details className="collapse collapse-arrow bg-base-200" open>
-            <summary className="collapse-title text-sm font-medium">
-              Raw JSON
-            </summary>
-            <div className="collapse-content">
-              <pre className="text-xs overflow-x-auto whitespace-pre-wrap break-all">
-                {JSON.stringify(result, null, 2)}
-              </pre>
-            </div>
-          </details>
-        </div>
+      {html && (
+        <div
+          className="border border-base-300 rounded-lg p-4 bg-base-100 overflow-x-auto"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
       )}
     </div>
   );
