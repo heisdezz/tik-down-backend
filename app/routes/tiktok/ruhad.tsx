@@ -1,34 +1,32 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+
+async function fetchRuhad(url: string) {
+  const res = await fetch("/tiktok/ruhad-api", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ u: url }),
+  });
+  const body = await res.json();
+  if (!res.ok) {
+    throw new Error(body.detail ?? body.error ?? `HTTP ${res.status}`);
+  }
+  return body;
+}
 
 export default function RuhadTikTokTest() {
   const [url, setUrl] = useState("");
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  const run = async () => {
+  const {
+    mutate,
+    data: result,
+    error,
+    isPending: loading,
+  } = useMutation({ mutationFn: fetchRuhad });
+
+  const run = () => {
     if (!url) return;
-    setResult(null);
-    setError(null);
-    setLoading(true);
-
-    try {
-      const res = await fetch("/tiktok/ruhad-api", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ u: url }),
-      });
-      const body = await res.json();
-      if (!res.ok) {
-        setError(body.detail ?? body.error ?? `HTTP ${res.status}`);
-        return;
-      }
-      setResult(body);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    mutate(url);
   };
 
   const data = result?.data;
@@ -75,7 +73,7 @@ export default function RuhadTikTokTest() {
 
       {error && (
         <div className="alert alert-error">
-          <span className="break-all">{error}</span>
+          <span className="break-all">{error.message}</span>
         </div>
       )}
 
