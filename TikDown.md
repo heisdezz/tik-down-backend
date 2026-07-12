@@ -114,6 +114,55 @@ Content-Type: application/json
 
 ---
 
+### `POST /tiktok/ruhad-api`
+
+Fetches direct download links for a single TikTok video via the
+`rahad-all-downloader-v2` third-party service (no yt-dlp, no cookies required).
+Returns a single JSON object (not streamed).
+
+#### Request Body (JSON)
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `u`   | Yes      | Full TikTok video URL |
+
+#### Example
+
+```
+POST /tiktok/ruhad-api
+Content-Type: application/json
+
+{
+  "u": "https://www.tiktok.com/@tiktok/video/7106594312292453675"
+}
+```
+
+#### Response Shape
+
+```json
+{
+  "success": true,
+  "data": {
+    "title": "Video caption",
+    "thumbnail": "https://...",
+    "owner": { "username": "tiktok", "nickname": "TikTok", "avatar": "https://..." },
+    "stats": { "likes": 98697, "comments": 1282, "plays": 564067, "shares": 127 },
+    "download": {
+      "no_watermark": "https://...mp4",
+      "watermark": "https://...mp4",
+      "music": "https://...mp3"
+    },
+    "source": "tiktok"
+  }
+}
+```
+
+> Note: this endpoint depends on an external service and does not use the
+> shared 5-minute cache. Use `/tiktok/download` (yt-dlp) if you need cookie
+> auth or consistent behaviour.
+
+---
+
 ## Response Format (streaming endpoints)
 
 - **Content-Type:** `application/x-ndjson`
@@ -344,7 +393,7 @@ func fetchInstagram(username: String, sessionId: String, limit: Int = 20) async 
 
 ## Fetching Single Video (Non-Streaming)
 
-For `POST /tiktok/download` and `POST /facebook`, the response is a single JSON object containing full metadata and all available formats/URLs.
+For `POST /tiktok/download`, `POST /facebook`, and `POST /tiktok/ruhad-api`, the response is a single JSON object containing full metadata and all available formats/URLs.
 
 ### JavaScript
 
@@ -372,6 +421,20 @@ async function fetchFacebookVideo(videoUrl, cookies) {
   if (!res.ok) throw new Error((await res.json()).error);
   const data = await res.json();
   console.log('Formats:', data.formats);
+  return data;
+}
+
+// TikTok via rahad-all-downloader-v2 (no cookies)
+async function fetchTikTokRuhad(videoUrl) {
+  const res = await fetch('https://tik-down-backend.vercel.app/tiktok/ruhad-api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ u: videoUrl }),
+  });
+
+  if (!res.ok) throw new Error((await res.json()).error);
+  const { data } = await res.json();
+  console.log('No-watermark URL:', data.download.no_watermark);
   return data;
 }
 ```
