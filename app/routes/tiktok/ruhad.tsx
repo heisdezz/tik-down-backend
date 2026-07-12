@@ -1,78 +1,46 @@
 import { useState } from "react";
-import type { ActionFunctionArgs } from "react-router";
-
-export const loader = async () =>
-  Response.json({ error: "Method not allowed — use POST" }, { status: 405 });
-
-export const action = async ({ request }: ActionFunctionArgs) => {
-  if (request.method !== "POST") {
-    return Response.json({ error: "Method not allowed" }, { status: 405 });
-  }
-
-  let body: any;
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: "Request body must be JSON" }, { status: 400 });
-  }
-
-  const { u: url } = body ?? {};
-  if (!url) {
-    return Response.json({ error: "Missing u (video URL) in body" }, { status: 400 });
-  }
-
-  try {
-    new URL(url);
-  } catch {
-    return Response.json({ error: "Invalid URL" }, { status: 400 });
-  }
-
-  try {
-    // Dynamic import keeps the server-only package out of the client bundle.
-    const { alldl } = await import("rahad-all-downloader-v2");
-    const result = await alldl.tiktok(url);
-    const html = typeof result === "string" ? result : JSON.stringify(result);
-    return new Response(html, {
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
-  } catch (err: any) {
-    console.error("[ruhad tiktok] error:", err);
-    return new Response(
-      `<div style="color:red">Failed to fetch video: ${err?.message ?? String(err)}</div>`,
-      { status: 502, headers: { "Content-Type": "text/html; charset=utf-8" } },
-    );
-  }
-};
 
 export default function RuhadTikTokTest() {
   const [url, setUrl] = useState("");
-  const [html, setHtml] = useState<string | null>(null);
+  const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const run = async () => {
     if (!url) return;
-    setHtml(null);
+    setResult(null);
     setError(null);
     setLoading(true);
 
     try {
-      const res = await fetch("/tiktok/ruhad", {
+      const res = await fetch("/tiktok/ruhad-api", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ u: url }),
       });
-      const text = await res.text();
+      const body = await res.json();
       if (!res.ok) {
-        setError(text || `HTTP ${res.status}`);
+        setError(body.detail ?? body.error ?? `HTTP ${res.status}`);
         return;
       }
-      setHtml(text);
+      setResult(body);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const data = result?.data;
+  const downloads: Array<[string, string]> = data?.download
+    ? Object.entries(data.download).filter(([, v]) => typeof v === "string" && v)
+        .map(([k, v]) => [k, v as string])
+    : [];
+
+  const labels: Record<string, string> = {
+    no_watermark: "No watermark",
+    watermark: "Watermark",
+    music: "Audio",
   };
 
   return (
@@ -111,11 +79,80 @@ export default function RuhadTikTokTest() {
         </div>
       )}
 
-      {html && (
-        <div
-          className="border border-base-300 rounded-lg p-4 bg-base-100 overflow-x-auto"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+      {data && (
+        <div className="space-y-4">
+          <div className="card card-side bg-base-200 shadow-sm overflow-hidden">
+            <figure className="w-40 shrink-0 bg-base-300">
+              {data.thumbnail ? (
+                <img
+                  src={data.thumbnail}
+                  alt=""
+                  className="w-40 h-full object-cover"
+                />
+              ) : (
+                <div className="w-40 h-24 flex items-center justify-center text-base-content/20 text-xs">
+                  no thumb
+                </div>
+              )}
+            </figure>
+            <div className="card-body p-4 gap-2 min-w-0">
+              <p className="font-medium text-sm leading-snug line-clamp-3">
+                {data.title}
+              </p>
+              {data.owner?.nickname && (
+                <p className="text-xs text-base-content/60">
+                  {data.owner.nickname} (@{data.owner.username})
+                </p>
+              )}
+              {data.stats && (
+                <div className="flex gap-2 flex-wrap">
+                  {data.stats.plays != null && (
+                    <span className="badge badge-ghost badge-sm">
+                      {data.stats.plays.toLocaleString()} plays
+                    </span>
+                  )}
+                  {data.stats.likes != null && (
+                    <span className="badge badge-ghost badge-sm">
+                      {data.stats.likes.toLocaleString()} likes
+                    </span>
+                  )}
+                  {data.stats.comments != null && (
+                    <span className="badge badge-ghost badge-sm">
+                      {data.stats.comments.toLocaleString()} comments
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {downloads.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {downloads.map(([key, link]) => (
+                <a
+                  key={key}
+                  href={link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-sm btn-primary"
+                >
+                  {labels[key] ?? key}
+                </a>
+              ))}
+            </div>
+          )}
+
+          <details className="collapse collapse-arrow bg-base-200">
+            <summary className="collapse-title text-sm font-medium">
+              Raw JSON
+            </summary>
+            <div className="collapse-content">
+              <pre className="text-xs overflow-x-auto whitespace-pre-wrap break-all">
+                {JSON.stringify(result, null, 2)}
+              </pre>
+            </div>
+          </details>
+        </div>
       )}
     </div>
   );
