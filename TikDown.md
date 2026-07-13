@@ -163,6 +163,59 @@ Content-Type: application/json
 
 ---
 
+### `POST /tiktok/tk4`
+
+Fetches TikTok video or profile metadata using the `tk4-downloader` library.
+Returns a single JSON object (not streamed) containing the raw download data and parsed video details.
+
+#### Request Body (JSON)
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `u`   | Yes      | Full TikTok video or profile URL |
+
+#### Example
+
+```
+POST /tiktok/tk4
+Content-Type: application/json
+
+{
+  "u": "https://www.tiktok.com/@999.ian/video/7660657467071745293"
+}
+```
+
+#### Response Shape
+
+```json
+{
+  "ok": true,
+  "result": {
+    "id": "7660657467071745293",
+    "url": "https://www.tiktok.com/@999.ian/video/7660657467071745293",
+    "data": "<!DOCTYPE html>..."
+  },
+  "parsed": {
+    "id": "7660657467071745293",
+    "title": "maybe||#999#juicewrld#999forever#viral",
+    "description": "maybe||#999#juicewrld#999forever#viral",
+    "url": "https://v16-webapp-prime.tiktok.com/video/tos/alisg/...",
+    "duration": 25,
+    "author": {
+      "id": "7340081979545109546",
+      "name": "734",
+      "uniqueId": "999.ian"
+    },
+    "thumbnails": [
+      "https://p16-common-sign.tiktokcdn.com/..."
+    ]
+  },
+  "progress": []
+}
+```
+
+---
+
 ## Response Format (streaming endpoints)
 
 - **Content-Type:** `application/x-ndjson`
