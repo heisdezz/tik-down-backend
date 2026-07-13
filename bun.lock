@@ -12,6 +12,7 @@
         "axios": "^1.18.1",
         "cakkatrok-tiktok-downloader": "^1.1.1",
         "daisyui": "^5.5.19",
+        "get-video-id": "^4.2.0",
         "isbot": "^5.1.36",
         "rahad-all-downloader-v2": "^2.0.3",
         "react": "^19.2.6",
@@ -602,6 +603,8 @@
     "get-proto": ["get-proto@1.0.1", "", { "dependencies": { "dunder-proto": "^1.0.1", "es-object-atoms": "^1.0.0" } }, "sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g=="],
 
     "get-stream": ["get-stream@6.0.1", "", {}, "sha512-ts6Wi+2j3jQjqi70w5AlN8DFnkSwC+MqmxEzdEALB2qXZYV3X/b1CTfgPLGJNMeAWxdPfU8FO1ms3NUfaHCPYg=="],
+
+    "get-video-id": ["get-video-id@4.2.0", "", {}, "sha512-jRGMts6wFqruMF85oEHY0aLqdn9Eo/AL/VVEwxJk8SWY5nNJDOK4fj1WUPO9/+CnhexZh2l3sZ4S+qGIJJJ8YA=="],
 
     "glob-parent": ["glob-parent@5.1.2", "", { "dependencies": { "is-glob": "^4.0.1" } }, "sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow=="],
 

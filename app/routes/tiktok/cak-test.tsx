@@ -30,6 +30,8 @@ export default function CakTest() {
     mutate(url.trim());
   };
 
+  const authorLine = media?.owner ? null : media?.author || null;
+
   return (
     <div className="container mx-auto py-6 max-w-3xl space-y-6 px-4">
       <h1 className="text-2xl font-bold">TikTok Test — cakkatrok</h1>
@@ -95,32 +97,59 @@ export default function CakTest() {
               </p>
 
               {/* Author */}
-              {media.author_meta?.uniqueId ? (
-                <p className="text-xs text-base-content/60 truncate">
-                  {media.author_meta.name}{" "}
-                  <span className="opacity-60">
-                    @{media.author_meta.uniqueId}
+              {media.owner ? (
+                <div className="flex items-center gap-2">
+                  {media.owner.avatar && (
+                    <img
+                      src={media.owner.avatar}
+                      alt=""
+                      className="w-6 h-6 rounded-full object-cover shrink-0"
+                    />
+                  )}
+                  <span className="text-xs text-base-content/60 truncate">
+                    {media.owner.nickname}{" "}
+                    <span className="opacity-60">@{media.owner.username}</span>
                   </span>
-                </p>
-              ) : media.author ? (
-                <p className="text-xs text-base-content/60">{media.author}</p>
+                </div>
+              ) : authorLine ? (
+                <p className="text-xs text-base-content/60">{authorLine}</p>
               ) : null}
 
-              {/* video_id + duration badges */}
+              {/* Stats */}
+              {media.stats && (
+                <div className="flex gap-2 flex-wrap">
+                  {media.stats.plays != null && (
+                    <span className="badge badge-ghost badge-sm">
+                      {media.stats.plays.toLocaleString()} plays
+                    </span>
+                  )}
+                  {media.stats.likes != null && (
+                    <span className="badge badge-ghost badge-sm">
+                      {media.stats.likes.toLocaleString()} likes
+                    </span>
+                  )}
+                  {media.stats.comments != null && (
+                    <span className="badge badge-ghost badge-sm">
+                      {media.stats.comments.toLocaleString()} comments
+                    </span>
+                  )}
+                  {media.stats.shares != null && (
+                    <span className="badge badge-ghost badge-sm">
+                      {media.stats.shares.toLocaleString()} shares
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div className="flex gap-2 flex-wrap">
+                <span className="badge badge-outline badge-sm capitalize">
+                  {media.type}
+                </span>
                 {media.video_id && (
                   <span className="badge badge-ghost badge-sm font-mono">
                     ID: {media.video_id}
                   </span>
                 )}
-                {media.duration != null && (
-                  <span className="badge badge-ghost badge-sm">
-                    {media.duration}s
-                  </span>
-                )}
-                <span className="badge badge-outline badge-sm capitalize">
-                  {media.type}
-                </span>
               </div>
             </div>
           </div>
