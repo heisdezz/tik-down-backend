@@ -218,10 +218,11 @@ Content-Type: application/json
 
 ### `POST /tiktok/cak`
 
-Fetches media info and direct download URLs for a single TikTok video via the
-`cakkatrok-tiktok-downloader` library (no yt-dlp, no cookies required).
-Detects content type automatically — video, slideshow photos, or audio.
-Returns a single JSON object (not streamed).
+Fetches media info and direct download URLs for a single TikTok video.
+Uses `cakkatrok-tiktok-downloader` for download links and `rahad-all-downloader-v2`
+for richer metadata (owner, stats). Both sources are fetched in parallel and merged —
+ruhad wins on title/thumbnail/owner/stats; cak wins on download links.
+No yt-dlp or session cookie required. Returns a single JSON object (not streamed).
 
 #### Request Body (JSON)
 
@@ -256,16 +257,28 @@ Content-Type: application/json
     "video": "https://...mp4",
     "audio": "https://...mp3",
     "photos": [],
-    "links": ["https://..."]
+    "links": ["https://..."],
+    "owner": {
+      "username": "username",
+      "nickname": "Display Name",
+      "avatar": "https://..."
+    },
+    "stats": {
+      "likes": 43,
+      "comments": 4,
+      "plays": 371,
+      "shares": 1
+    }
   }
 }
 ```
 
 `type` is one of `"video"`, `"photo"`, or `"audio"`.
 For slideshow posts, `photos` contains an array of image URLs and `video` is `null`.
+`owner` and `stats` are `null` if the ruhad metadata fetch fails (cak data is still returned).
 
-> Note: this endpoint proxies through SaveTik (`savetik.io`) and does not use
-> yt-dlp or a session cookie. Use `/tiktok/download` if you need cookie auth.
+> Note: download links come from SaveTik (`savetik.io`); metadata comes from
+> `rahad-all-downloader-v2`. Use `/tiktok/download` if you need cookie auth.
 
 ---
 
