@@ -31,6 +31,7 @@ type RuhadData = {
   thumbnail: string;
   owner: RuhadOwner;
   stats: RuhadStats;
+  video_id: string | null;
 };
 
 export type MergedMedia = CakMedia & {
@@ -41,29 +42,38 @@ export type MergedMedia = CakMedia & {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+/**
+ * Fetches ruhad metadata and extracts the video ID from the CDN download URL.
+ * The `item_id` query param on the no-watermark CDN URL is the canonical TikTok
+ * video ID — it works for both full URLs and short links (vt/vm.tiktok.com)
+ * because ruhad resolves them internally.
+ */
 async function fetchRuhadMeta(videoUrl: string): Promise<RuhadData | null> {
   try {
     const mod: any = await import("rahad-all-downloader-v2");
     const alldl = mod.default?.alldl ?? mod.alldl;
     const result = await alldl.tiktok(videoUrl);
     if (!result?.success || !result.data) return null;
-    return result.data as RuhadData;
-  } catch {
-    return null;
-  }
-}
 
-/** Extract TikTok numeric video ID from any URL format, including short links. */
-async function extractVideoId(videoUrl: string): Promise<string | null> {
-  // Fast path: ID already in the path (/@user/video/DIGITS)
-  const direct = videoUrl.match(/\/video\/(\d+)/);
-  if (direct) return direct[1];
+    const data = result.data;
 
-  // Short URL (vt.tiktok.com, vm.tiktok.com, etc.) — follow the redirect
-  try {
-    const res = await fetch(videoUrl, { method: "HEAD", redirect: "follow" });
-    const finalMatch = res.url.match(/\/video\/(\d+)/);
-    return finalMatch ? finalMatch[1] : null;
+    let video_id: string | null = null;
+    const noWatermark: string | undefined = data?.download?.no_watermark;
+    if (noWatermark) {
+      try {
+        video_id = new URL(noWatermark).searchParams.get("item_id");
+      } catch {
+        /* malformed URL */
+      }
+    }
+
+    return {
+      title: data.title,
+      thumbnail: data.thumbnail,
+      owner: data.owner,
+      stats: data.stats,
+      video_id,
+    };
   } catch {
     return null;
   }
@@ -74,10 +84,9 @@ async function extractVideoId(videoUrl: string): Promise<string | null> {
 export async function fetchMediaWithMeta(
   videoUrl: string,
 ): Promise<MergedMedia> {
-  const [cakResult, ruhadResult, videoIdResult] = await Promise.allSettled([
+  const [cakResult, ruhadResult] = await Promise.allSettled([
     getMedia(videoUrl) as Promise<CakMedia>,
     fetchRuhadMeta(videoUrl),
-    extractVideoId(videoUrl),
   ]);
 
   if (cakResult.status === "rejected") {
@@ -86,14 +95,12 @@ export async function fetchMediaWithMeta(
 
   const cak = cakResult.value;
   const ruhad = ruhadResult.status === "fulfilled" ? ruhadResult.value : null;
-  const video_id =
-    videoIdResult.status === "fulfilled" ? videoIdResult.value : null;
 
   return {
     ...cak,
     title: ruhad?.title || cak.title,
     thumbnail: ruhad?.thumbnail || cak.thumbnail,
-    video_id,
+    video_id: ruhad?.video_id ?? null,
     owner: ruhad?.owner ?? null,
     stats: ruhad?.stats ?? null,
   };
