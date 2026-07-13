@@ -1,6 +1,5 @@
 // @ts-ignore
 import { getMedia } from "cakkatrok-tiktok-downloader";
-// @ts-ignore — no types for ttsave
 import type { ActionFunctionArgs } from "react-router";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -19,94 +18,45 @@ type CakMedia = {
   links: string[];
 };
 
-export type TtsaveAuthor = {
-  name: string | null;
-  username: string | null;
+type RuhadOwner = { username: string; nickname: string; avatar: string };
+type RuhadStats = {
+  likes: number;
+  comments: number;
+  plays: number;
+  shares: number;
 };
-
-export type TtsaveStats = {
-  views: string | null;
-  likes: string | null;
-  comments: string | null;
-  shares: string | null;
-};
-
-type TtsaveMeta = {
-  title: string | null;
-  thumbnail: string | null;
-  author_meta: TtsaveAuthor;
-  stats: TtsaveStats;
-  video_id: string | null;
+type RuhadData = {
+  title: string;
+  thumbnail: string;
+  owner: RuhadOwner;
+  stats: RuhadStats;
 };
 
 export type MergedMedia = CakMedia & {
-  video_id: string | null;
-  author_meta: TtsaveAuthor | null;
-  stats: TtsaveStats | null;
+  owner: RuhadOwner | null;
+  stats: RuhadStats | null;
 };
 
-// ─── ttsave metadata helper ───────────────────────────────────────────────────
+// ─── Shared fetch helper ─────────────────────────────────────────────────────
 
-async function fetchTtsaveMeta(videoUrl: string): Promise<TtsaveMeta | null> {
+async function fetchRuhadMeta(videoUrl: string): Promise<RuhadData | null> {
   try {
-    // @ts-ignore
-    const mod: any = await import("ttsave");
-    const { getInfo } = mod.default ?? mod;
-    const result = await getInfo(videoUrl);
-    if (!result?.success) return null;
-
-    // Try to pull video_id from the no-watermark CDN URL first,
-    // then fall back to a regex on the original input URL.
-    let video_id: string | null = null;
-    const noWm: string | undefined = result.video?.url?.no_wm;
-    if (noWm) {
-      // tikcdn.io/ssstik/<video_id>
-      const tikcdnMatch = noWm.match(/tikcdn\.io\/ssstik\/(\d+)/);
-      if (tikcdnMatch) video_id = tikcdnMatch[1];
-
-      if (!video_id) {
-        // item_id query param on TikTok CDN URLs
-        try {
-          video_id = new URL(noWm).searchParams.get("item_id");
-        } catch {
-          /* malformed URL */
-        }
-      }
-    }
-    // Last resort: extract from full URL path (works for non-short URLs)
-    if (!video_id) {
-      const pathMatch = videoUrl.match(/\/video\/(\d+)/);
-      if (pathMatch) video_id = pathMatch[1];
-    }
-
-    return {
-      title: result.author?.judul || null,
-      thumbnail: result.video?.thumbnail || null,
-      author_meta: {
-        name: result.author?.name || null,
-        username: result.author?.username || null,
-      },
-      stats: {
-        views: result.video?.views || null,
-        likes: result.video?.loves || null,
-        comments: result.video?.comments || null,
-        shares: result.video?.shares || null,
-      },
-      video_id,
-    };
+    const mod: any = await import("rahad-all-downloader-v2");
+    const alldl = mod.default?.alldl ?? mod.alldl;
+    const result = await alldl.tiktok(videoUrl);
+    if (!result?.success || !result.data) return null;
+    return result.data as RuhadData;
   } catch {
     return null;
   }
 }
 
-// ─── Shared fetch helper ──────────────────────────────────────────────────────
-
 export async function fetchMediaWithMeta(
   videoUrl: string,
 ): Promise<MergedMedia> {
-  const [cakResult, ttsaveResult] = await Promise.allSettled([
+  const [cakResult, ruhadResult] = await Promise.allSettled([
     getMedia(videoUrl) as Promise<CakMedia>,
-    fetchTtsaveMeta(videoUrl),
+    fetchRuhadMeta(videoUrl),
   ]);
 
   if (cakResult.status === "rejected") {
@@ -114,15 +64,14 @@ export async function fetchMediaWithMeta(
   }
 
   const cak = cakResult.value;
-  const tt = ttsaveResult.status === "fulfilled" ? ttsaveResult.value : null;
+  const ruhad = ruhadResult.status === "fulfilled" ? ruhadResult.value : null;
 
   return {
     ...cak,
-    title: tt?.title || cak.title,
-    thumbnail: tt?.thumbnail || cak.thumbnail,
-    video_id: tt?.video_id ?? null,
-    author_meta: tt?.author_meta ?? null,
-    stats: tt?.stats ?? null,
+    title: ruhad?.title || cak.title,
+    thumbnail: ruhad?.thumbnail || cak.thumbnail,
+    owner: ruhad?.owner ?? null,
+    stats: ruhad?.stats ?? null,
   };
 }
 
