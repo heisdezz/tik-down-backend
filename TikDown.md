@@ -15,11 +15,11 @@ Session cookie is passed per-request in the JSON body — nothing is stored serv
 
 #### Request Body (JSON)
 
-| Field           | Required | Description |
-|-----------------|----------|-------------|
+| Field           | Required | Description                                                           |
+| --------------- | -------- | --------------------------------------------------------------------- |
 | `u`             | Yes      | Username, `@username`, or full `https://www.tiktok.com/@username` URL |
-| `tt_session_id` | Yes      | TikTok `sessionid` cookie value |
-| `limit`         | No       | Max videos to return. Recommended max: 50. |
+| `tt_session_id` | Yes      | TikTok `sessionid` cookie value                                       |
+| `limit`         | No       | Max videos to return. Recommended max: 50.                            |
 
 #### Example
 
@@ -43,11 +43,11 @@ Session cookie is passed per-request in the JSON body — nothing is stored serv
 
 #### Request Body (JSON)
 
-| Field           | Required | Description |
-|-----------------|----------|-------------|
+| Field           | Required | Description                                                              |
+| --------------- | -------- | ------------------------------------------------------------------------ |
 | `u`             | Yes      | Username, `@username`, or full `https://www.instagram.com/username/` URL |
-| `ig_session_id` | Yes      | Instagram `sessionid` cookie value |
-| `limit`         | No       | Max posts to return. Recommended max: 50. |
+| `ig_session_id` | Yes      | Instagram `sessionid` cookie value                                       |
+| `limit`         | No       | Max posts to return. Recommended max: 50.                                |
 
 #### Example
 
@@ -69,9 +69,9 @@ Returns a single JSON object (not streamed).
 
 #### Request Body (JSON)
 
-| Field           | Required | Description |
-|-----------------|----------|-------------|
-| `u`             | Yes      | Full TikTok video URL |
+| Field           | Required | Description                     |
+| --------------- | -------- | ------------------------------- |
+| `u`             | Yes      | Full TikTok video URL           |
 | `tt_session_id` | Yes      | TikTok `sessionid` cookie value |
 
 #### Example
@@ -95,9 +95,9 @@ Returns a single JSON object (not streamed).
 
 #### Request Body (JSON)
 
-| Field        | Required | Description |
-|--------------|----------|-------------|
-| `u`          | Yes      | Full Facebook video URL (`facebook.com` or `fb.watch`) |
+| Field        | Required | Description                                                                                                                                   |
+| ------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `u`          | Yes      | Full Facebook video URL (`facebook.com` or `fb.watch`)                                                                                        |
 | `fb_cookies` | No       | Raw cookie header string from a logged-in browser session (e.g. `"c_user=...; xs=...; datr=..."`). Only needed for private/restricted videos. |
 
 #### Example
@@ -122,8 +122,8 @@ Returns a single JSON object (not streamed).
 
 #### Request Body (JSON)
 
-| Field | Required | Description |
-|-------|----------|-------------|
+| Field | Required | Description           |
+| ----- | -------- | --------------------- |
 | `u`   | Yes      | Full TikTok video URL |
 
 #### Example
@@ -145,8 +145,17 @@ Content-Type: application/json
   "data": {
     "title": "Video caption",
     "thumbnail": "https://...",
-    "owner": { "username": "tiktok", "nickname": "TikTok", "avatar": "https://..." },
-    "stats": { "likes": 98697, "comments": 1282, "plays": 564067, "shares": 127 },
+    "owner": {
+      "username": "tiktok",
+      "nickname": "TikTok",
+      "avatar": "https://..."
+    },
+    "stats": {
+      "likes": 98697,
+      "comments": 1282,
+      "plays": 564067,
+      "shares": 127
+    },
     "download": {
       "no_watermark": "https://...mp4",
       "watermark": "https://...mp4",
@@ -170,8 +179,8 @@ Returns a single JSON object (not streamed) containing the raw download data and
 
 #### Request Body (JSON)
 
-| Field | Required | Description |
-|-------|----------|-------------|
+| Field | Required | Description                      |
+| ----- | -------- | -------------------------------- |
 | `u`   | Yes      | Full TikTok video or profile URL |
 
 #### Example
@@ -206,9 +215,7 @@ Content-Type: application/json
       "name": "734",
       "uniqueId": "999.ian"
     },
-    "thumbnails": [
-      "https://p16-common-sign.tiktokcdn.com/..."
-    ]
+    "thumbnails": ["https://p16-common-sign.tiktokcdn.com/..."]
   },
   "progress": []
 }
@@ -219,15 +226,17 @@ Content-Type: application/json
 ### `POST /tiktok/cak`
 
 Fetches media info and direct download URLs for a single TikTok video.
-Uses `cakkatrok-tiktok-downloader` for download links and `rahad-all-downloader-v2`
-for richer metadata (owner, stats). Both sources are fetched in parallel and merged —
-ruhad wins on title/thumbnail/owner/stats; cak wins on download links.
-No yt-dlp or session cookie required. Returns a single JSON object (not streamed).
+Uses `cakkatrok-tiktok-downloader` for download links, `rahad-all-downloader-v2`
+for richer metadata (owner, stats), and `get-video-id` to extract the numeric video ID
+directly from the URL — all without yt-dlp or a session cookie.
+cak and ruhad are fetched in parallel and merged: ruhad wins on title/thumbnail/owner/stats;
+cak wins on download links; `video_id` is always derived from the input URL.
+Returns a single JSON object (not streamed).
 
 #### Request Body (JSON)
 
-| Field | Required | Description |
-|-------|----------|-------------|
+| Field | Required | Description           |
+| ----- | -------- | --------------------- |
 | `u`   | Yes      | Full TikTok video URL |
 
 #### Example
@@ -258,6 +267,7 @@ Content-Type: application/json
     "audio": "https://...mp3",
     "photos": [],
     "links": ["https://..."],
+    "video_id": "7106594312292453675",
     "owner": {
       "username": "username",
       "nickname": "Display Name",
@@ -275,6 +285,7 @@ Content-Type: application/json
 
 `type` is one of `"video"`, `"photo"`, or `"audio"`.
 For slideshow posts, `photos` contains an array of image URLs and `video` is `null`.
+`video_id` is extracted from the URL and is always present when the URL contains a valid TikTok video ID.
 `owner` and `stats` are `null` if the ruhad metadata fetch fails (cak data is still returned).
 
 > Note: download links come from SaveTik (`savetik.io`); metadata comes from
@@ -290,18 +301,18 @@ For slideshow posts, `photos` contains an array of image URLs and `video` is `nu
 
 ### Video / Post Object Fields
 
-| Field         | Type    | Description |
-|---------------|---------|-------------|
-| `id`          | string  | Unique video/post ID |
-| `title`       | string  | Caption/title |
-| `webpage_url` | string  | Full URL to the post |
-| `url`         | string  | Fallback if `webpage_url` is absent |
-| `thumbnail`   | string  | Thumbnail image URL |
+| Field         | Type    | Description                                    |
+| ------------- | ------- | ---------------------------------------------- |
+| `id`          | string  | Unique video/post ID                           |
+| `title`       | string  | Caption/title                                  |
+| `webpage_url` | string  | Full URL to the post                           |
+| `url`         | string  | Fallback if `webpage_url` is absent            |
+| `thumbnail`   | string  | Thumbnail image URL                            |
 | `thumbnails`  | array   | All thumbnails — last entry is highest quality |
-| `duration`    | number  | Duration in seconds |
-| `uploader`    | string  | Username of the uploader |
-| `view_count`  | number? | View count (may be absent) |
-| `like_count`  | number? | Like count (may be absent) |
+| `duration`    | number  | Duration in seconds                            |
+| `uploader`    | string  | Username of the uploader                       |
+| `view_count`  | number? | View count (may be absent)                     |
+| `like_count`  | number? | Like count (may be absent)                     |
 
 ### Error Response Shape
 
@@ -309,14 +320,14 @@ For slideshow posts, `photos` contains an array of image URLs and `video` is `nu
 { "error": "Human-readable message", "detail": "Raw error (debug)" }
 ```
 
-| Status | Condition |
-|--------|-----------|
-| `400`  | Missing or invalid `u` / malformed body |
+| Status | Condition                                                                                                       |
+| ------ | --------------------------------------------------------------------------------------------------------------- |
+| `400`  | Missing or invalid `u` / malformed body                                                                         |
 | `401`  | Missing session cookie (`tt_session_id` / `ig_session_id`), or Facebook video is private and needs `fb_cookies` |
-| `404`  | Profile not found / no public posts |
-| `405`  | Wrong HTTP method (GET on these routes) |
-| `500`  | yt-dlp failed to initialize |
-| `502`  | Could not reach TikTok / Instagram / Facebook |
+| `404`  | Profile not found / no public posts                                                                             |
+| `405`  | Wrong HTTP method (GET on these routes)                                                                         |
+| `500`  | yt-dlp failed to initialize                                                                                     |
+| `502`  | Could not reach TikTok / Instagram / Facebook                                                                   |
 
 ---
 
@@ -400,9 +411,9 @@ Future<void> fetchInstagram(
 
 ```js
 async function fetchTikTok(username, sessionId, limit = 20) {
-  const res = await fetch('https://tik-down-backend.vercel.app/tiktok', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("https://tik-down-backend.vercel.app/tiktok", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ u: username, tt_session_id: sessionId, limit }),
   });
 
@@ -410,14 +421,14 @@ async function fetchTikTok(username, sessionId, limit = 20) {
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
-  let buf = '';
+  let buf = "";
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buf += decoder.decode(value, { stream: true });
-    const lines = buf.split('\n');
-    buf = lines.pop() ?? '';
+    const lines = buf.split("\n");
+    buf = lines.pop() ?? "";
     for (const line of lines) {
       if (line.trim()) {
         const video = JSON.parse(line);
@@ -432,9 +443,9 @@ async function fetchTikTok(username, sessionId, limit = 20) {
 
 ```js
 async function fetchInstagram(username, sessionId, limit = 20) {
-  const res = await fetch('https://tik-down-backend.vercel.app/instagram', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("https://tik-down-backend.vercel.app/instagram", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ u: username, ig_session_id: sessionId, limit }),
   });
 
@@ -442,14 +453,14 @@ async function fetchInstagram(username, sessionId, limit = 20) {
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
-  let buf = '';
+  let buf = "";
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buf += decoder.decode(value, { stream: true });
-    const lines = buf.split('\n');
-    buf = lines.pop() ?? '';
+    const lines = buf.split("\n");
+    buf = lines.pop() ?? "";
     for (const line of lines) {
       if (line.trim()) {
         const post = JSON.parse(line);
@@ -518,59 +529,70 @@ For `POST /tiktok/download`, `POST /facebook`, `POST /tiktok/ruhad-api`, and `PO
 
 ```js
 async function fetchVideoDownload(videoUrl, sessionId) {
-  const res = await fetch('https://tik-down-backend.vercel.app/tiktok/download', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ u: videoUrl, tt_session_id: sessionId }),
-  });
+  const res = await fetch(
+    "https://tik-down-backend.vercel.app/tiktok/download",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ u: videoUrl, tt_session_id: sessionId }),
+    },
+  );
 
   if (!res.ok) throw new Error((await res.json()).error);
   const data = await res.json();
-  console.log('Download URL:', data.url);
+  console.log("Download URL:", data.url);
   return data;
 }
 
 async function fetchFacebookVideo(videoUrl, cookies) {
-  const res = await fetch('https://tik-down-backend.vercel.app/facebook', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ u: videoUrl, ...(cookies ? { fb_cookies: cookies } : {}) }),
+  const res = await fetch("https://tik-down-backend.vercel.app/facebook", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      u: videoUrl,
+      ...(cookies ? { fb_cookies: cookies } : {}),
+    }),
   });
 
   if (!res.ok) throw new Error((await res.json()).error);
   const data = await res.json();
-  console.log('Formats:', data.formats);
+  console.log("Formats:", data.formats);
   return data;
 }
 
 // TikTok via rahad-all-downloader-v2 (no cookies)
 async function fetchTikTokRuhad(videoUrl) {
-  const res = await fetch('https://tik-down-backend.vercel.app/tiktok/ruhad-api', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ u: videoUrl }),
-  });
+  const res = await fetch(
+    "https://tik-down-backend.vercel.app/tiktok/ruhad-api",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ u: videoUrl }),
+    },
+  );
 
   if (!res.ok) throw new Error((await res.json()).error);
   const { data } = await res.json();
-  console.log('No-watermark URL:', data.download.no_watermark);
+  console.log("No-watermark URL:", data.download.no_watermark);
   return data;
 }
 
 // TikTok via cakkatrok-tiktok-downloader (no cookies, supports video/photo/audio)
 async function fetchTikTokCak(videoUrl) {
-  const res = await fetch('https://tik-down-backend.vercel.app/tiktok/cak', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("https://tik-down-backend.vercel.app/tiktok/cak", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ u: videoUrl }),
   });
 
   if (!res.ok) throw new Error((await res.json()).error);
   const { media } = await res.json();
+  console.log("Video ID:", media.video_id);
+  console.log("Owner:", media.owner?.nickname, "@" + media.owner?.username);
   // media.type === 'video' | 'photo' | 'audio'
-  if (media.type === 'video') console.log('Video URL:', media.video);
-  if (media.type === 'photo') console.log('Photos:', media.photos);
-  if (media.type === 'audio') console.log('Audio URL:', media.audio);
+  if (media.type === "video") console.log("Video URL:", media.video);
+  if (media.type === "photo") console.log("Photos:", media.photos);
+  if (media.type === "audio") console.log("Audio URL:", media.audio);
   return media;
 }
 ```
@@ -614,6 +636,8 @@ Future<Map<String, dynamic>> fetchTikTokCak(String videoUrl) async {
   if (res.statusCode != 200) throw Exception(jsonDecode(res.body)['error']);
   final body = jsonDecode(res.body) as Map<String, dynamic>;
   final media = body['media'] as Map<String, dynamic>;
+  final videoId = media['video_id'] as String?;
+  final owner = media['owner'] as Map<String, dynamic>?;
   // media['type'] is 'video', 'photo', or 'audio'
   return media;
 }
@@ -631,13 +655,13 @@ Future<Map<String, dynamic>> fetchTikTokCak(String videoUrl) async {
 
 ## Validation Rules
 
-| Input | Rule |
-|-------|------|
-| TikTok username | 1–24 chars, `[a-zA-Z0-9_.]` |
-| Instagram username | 1–30 chars, `[a-zA-Z0-9_.]` |
-| `@username` | Leading `@` stripped before validation |
-| Full URL | Must parse as valid URL with matching platform hostname |
-| Facebook URL | Hostname must end in `facebook.com` or `fb.watch` |
-| `fb_cookies` | Raw `name=value; name2=value2` cookie string, parsed into a Netscape cookie file |
-| `limit` | Optional integer, recommended max **50** |
-| Session IDs | URL-encoded values decoded automatically |
+| Input              | Rule                                                                             |
+| ------------------ | -------------------------------------------------------------------------------- |
+| TikTok username    | 1–24 chars, `[a-zA-Z0-9_.]`                                                      |
+| Instagram username | 1–30 chars, `[a-zA-Z0-9_.]`                                                      |
+| `@username`        | Leading `@` stripped before validation                                           |
+| Full URL           | Must parse as valid URL with matching platform hostname                          |
+| Facebook URL       | Hostname must end in `facebook.com` or `fb.watch`                                |
+| `fb_cookies`       | Raw `name=value; name2=value2` cookie string, parsed into a Netscape cookie file |
+| `limit`            | Optional integer, recommended max **50**                                         |
+| Session IDs        | URL-encoded values decoded automatically                                         |
