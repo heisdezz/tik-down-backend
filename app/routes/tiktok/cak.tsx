@@ -1,7 +1,6 @@
 // @ts-ignore
 import { getMedia } from "cakkatrok-tiktok-downloader";
-import { TikTokDownloader } from "tk4-downloader";
-import { parse as localParse } from "../../lib/parser";
+// @ts-ignore — no types for ttsave
 import type { ActionFunctionArgs } from "react-router";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -20,35 +19,81 @@ type CakMedia = {
   links: string[];
 };
 
-export type Tk4Author = {
-  id: string | null;
+export type TtsaveAuthor = {
   name: string | null;
-  uniqueId: string | null;
+  username: string | null;
 };
 
-type Tk4Meta = {
-  id: string | null;
+export type TtsaveStats = {
+  views: string | null;
+  likes: string | null;
+  comments: string | null;
+  shares: string | null;
+};
+
+type TtsaveMeta = {
   title: string | null;
-  duration: number | null;
-  author: Tk4Author;
-  thumbnails: string[];
+  thumbnail: string | null;
+  author_meta: TtsaveAuthor;
+  stats: TtsaveStats;
+  video_id: string | null;
 };
 
 export type MergedMedia = CakMedia & {
   video_id: string | null;
-  duration: number | null;
-  author_meta: Tk4Author | null;
+  author_meta: TtsaveAuthor | null;
+  stats: TtsaveStats | null;
 };
 
-// ─── tk4 metadata helper ──────────────────────────────────────────────────────
+// ─── ttsave metadata helper ───────────────────────────────────────────────────
 
-async function fetchTk4Meta(videoUrl: string): Promise<Tk4Meta | null> {
+async function fetchTtsaveMeta(videoUrl: string): Promise<TtsaveMeta | null> {
   try {
-    const downloader = new TikTokDownloader({ debug: false });
-    const result = await downloader.downloadVideo(String(videoUrl));
-    const parsed = await localParse(result);
-    if (!parsed || parsed.error) return null;
-    return parsed as Tk4Meta;
+    // @ts-ignore
+    const mod: any = await import("ttsave");
+    const { getInfo } = mod.default ?? mod;
+    const result = await getInfo(videoUrl);
+    if (!result?.success) return null;
+
+    // Try to pull video_id from the no-watermark CDN URL first,
+    // then fall back to a regex on the original input URL.
+    let video_id: string | null = null;
+    const noWm: string | undefined = result.video?.url?.no_wm;
+    if (noWm) {
+      // tikcdn.io/ssstik/<video_id>
+      const tikcdnMatch = noWm.match(/tikcdn\.io\/ssstik\/(\d+)/);
+      if (tikcdnMatch) video_id = tikcdnMatch[1];
+
+      if (!video_id) {
+        // item_id query param on TikTok CDN URLs
+        try {
+          video_id = new URL(noWm).searchParams.get("item_id");
+        } catch {
+          /* malformed URL */
+        }
+      }
+    }
+    // Last resort: extract from full URL path (works for non-short URLs)
+    if (!video_id) {
+      const pathMatch = videoUrl.match(/\/video\/(\d+)/);
+      if (pathMatch) video_id = pathMatch[1];
+    }
+
+    return {
+      title: result.author?.judul || null,
+      thumbnail: result.video?.thumbnail || null,
+      author_meta: {
+        name: result.author?.name || null,
+        username: result.author?.username || null,
+      },
+      stats: {
+        views: result.video?.views || null,
+        likes: result.video?.loves || null,
+        comments: result.video?.comments || null,
+        shares: result.video?.shares || null,
+      },
+      video_id,
+    };
   } catch {
     return null;
   }
@@ -59,9 +104,9 @@ async function fetchTk4Meta(videoUrl: string): Promise<Tk4Meta | null> {
 export async function fetchMediaWithMeta(
   videoUrl: string,
 ): Promise<MergedMedia> {
-  const [cakResult, tk4Result] = await Promise.allSettled([
+  const [cakResult, ttsaveResult] = await Promise.allSettled([
     getMedia(videoUrl) as Promise<CakMedia>,
-    fetchTk4Meta(videoUrl),
+    fetchTtsaveMeta(videoUrl),
   ]);
 
   if (cakResult.status === "rejected") {
@@ -69,20 +114,15 @@ export async function fetchMediaWithMeta(
   }
 
   const cak = cakResult.value;
-  const tk4 = tk4Result.status === "fulfilled" ? tk4Result.value : null;
-
-  // Use the last thumbnail from tk4 (highest quality); fall back to cak's
-  const tk4Thumb = tk4?.thumbnails?.length
-    ? tk4.thumbnails[tk4.thumbnails.length - 1]
-    : null;
+  const tt = ttsaveResult.status === "fulfilled" ? ttsaveResult.value : null;
 
   return {
     ...cak,
-    title: tk4?.title || cak.title,
-    thumbnail: tk4Thumb || cak.thumbnail,
-    video_id: tk4?.id ?? null,
-    duration: tk4?.duration ?? null,
-    author_meta: tk4?.author ?? null,
+    title: tt?.title || cak.title,
+    thumbnail: tt?.thumbnail || cak.thumbnail,
+    video_id: tt?.video_id ?? null,
+    author_meta: tt?.author_meta ?? null,
+    stats: tt?.stats ?? null,
   };
 }
 

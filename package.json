@@ -25,6 +25,7 @@
     "react-router": "7.15.1",
     "rr-next-routes": "^0.0.10",
     "tk4-downloader": "^1.6.0",
+    "ttsave": "^1.1.1",
     "ytdlp-nodejs": "^3.4.4"
   },
   "devDependencies": {

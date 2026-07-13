@@ -94,19 +94,48 @@ export default function CakTest() {
                 {media.title || "(no title)"}
               </p>
 
-              {/* Author from tk4 */}
-              {media.author_meta?.uniqueId ? (
+              {/* Author */}
+              {media.author_meta?.name ? (
                 <p className="text-xs text-base-content/60 truncate">
-                  {media.author_meta.name}{" "}
-                  <span className="opacity-60">
-                    @{media.author_meta.uniqueId}
-                  </span>
+                  {media.author_meta.name}
+                  {media.author_meta.username && (
+                    <span className="opacity-60">
+                      {" "}
+                      {media.author_meta.username}
+                    </span>
+                  )}
                 </p>
               ) : media.author ? (
                 <p className="text-xs text-base-content/60">{media.author}</p>
               ) : null}
 
-              {/* Badges */}
+              {/* Stats */}
+              {media.stats && (
+                <div className="flex gap-2 flex-wrap">
+                  {media.stats.views && (
+                    <span className="badge badge-ghost badge-sm">
+                      {media.stats.views} views
+                    </span>
+                  )}
+                  {media.stats.likes && (
+                    <span className="badge badge-ghost badge-sm">
+                      {media.stats.likes} likes
+                    </span>
+                  )}
+                  {media.stats.comments && (
+                    <span className="badge badge-ghost badge-sm">
+                      {media.stats.comments} comments
+                    </span>
+                  )}
+                  {media.stats.shares && (
+                    <span className="badge badge-ghost badge-sm">
+                      {media.stats.shares} shares
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Type + ID + Duration badges */}
               <div className="flex gap-2 flex-wrap">
                 <span className="badge badge-outline badge-sm capitalize">
                   {media.type}
@@ -114,11 +143,6 @@ export default function CakTest() {
                 {media.video_id && (
                   <span className="badge badge-ghost badge-sm font-mono">
                     ID: {media.video_id}
-                  </span>
-                )}
-                {media.duration != null && (
-                  <span className="badge badge-ghost badge-sm">
-                    {media.duration}s
                   </span>
                 )}
               </div>
