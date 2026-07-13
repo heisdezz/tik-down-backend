@@ -1,6 +1,5 @@
 // @ts-ignore
 import { getMedia } from "cakkatrok-tiktok-downloader";
-import getVideoId from "get-video-id";
 import type { ActionFunctionArgs } from "react-router";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -54,10 +53,17 @@ async function fetchRuhadMeta(videoUrl: string): Promise<RuhadData | null> {
   }
 }
 
-function extractVideoId(videoUrl: string): string | null {
+/** Extract TikTok numeric video ID from any URL format, including short links. */
+async function extractVideoId(videoUrl: string): Promise<string | null> {
+  // Fast path: ID already in the path (/@user/video/DIGITS)
+  const direct = videoUrl.match(/\/video\/(\d+)/);
+  if (direct) return direct[1];
+
+  // Short URL (vt.tiktok.com, vm.tiktok.com, etc.) — follow the redirect
   try {
-    const { id, service } = getVideoId(videoUrl);
-    return service === "tiktok" && id ? id : null;
+    const res = await fetch(videoUrl, { method: "HEAD", redirect: "follow" });
+    const finalMatch = res.url.match(/\/video\/(\d+)/);
+    return finalMatch ? finalMatch[1] : null;
   } catch {
     return null;
   }
@@ -68,9 +74,10 @@ function extractVideoId(videoUrl: string): string | null {
 export async function fetchMediaWithMeta(
   videoUrl: string,
 ): Promise<MergedMedia> {
-  const [cakResult, ruhadResult] = await Promise.allSettled([
+  const [cakResult, ruhadResult, videoIdResult] = await Promise.allSettled([
     getMedia(videoUrl) as Promise<CakMedia>,
     fetchRuhadMeta(videoUrl),
+    extractVideoId(videoUrl),
   ]);
 
   if (cakResult.status === "rejected") {
@@ -79,12 +86,14 @@ export async function fetchMediaWithMeta(
 
   const cak = cakResult.value;
   const ruhad = ruhadResult.status === "fulfilled" ? ruhadResult.value : null;
+  const video_id =
+    videoIdResult.status === "fulfilled" ? videoIdResult.value : null;
 
   return {
     ...cak,
     title: ruhad?.title || cak.title,
     thumbnail: ruhad?.thumbnail || cak.thumbnail,
-    video_id: extractVideoId(videoUrl),
+    video_id,
     owner: ruhad?.owner ?? null,
     stats: ruhad?.stats ?? null,
   };
