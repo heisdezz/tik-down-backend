@@ -30,10 +30,6 @@ export default function CakTest() {
     mutate(url.trim());
   };
 
-  const authorLine = media?.owner
-    ? null
-    : media?.author || null;
-
   return (
     <div className="container mx-auto py-6 max-w-3xl space-y-6 px-4">
       <h1 className="text-2xl font-bold">TikTok Test — cakkatrok</h1>
@@ -56,7 +52,11 @@ export default function CakTest() {
           onClick={run}
           disabled={loading || !url.trim()}
         >
-          {loading ? <span className="loading loading-spinner loading-sm" /> : "Fetch"}
+          {loading ? (
+            <span className="loading loading-spinner loading-sm" />
+          ) : (
+            "Fetch"
+          )}
         </button>
       </div>
 
@@ -78,7 +78,11 @@ export default function CakTest() {
           <div className="card card-side bg-base-200 shadow-sm overflow-hidden">
             <figure className="w-40 shrink-0 bg-base-300">
               {media.thumbnail ? (
-                <img src={media.thumbnail} alt="" className="w-40 h-full object-cover" />
+                <img
+                  src={media.thumbnail}
+                  alt=""
+                  className="w-40 h-full object-cover"
+                />
               ) : (
                 <div className="w-40 h-28 flex items-center justify-center text-base-content/20 text-xs">
                   no thumb
@@ -90,80 +94,89 @@ export default function CakTest() {
                 {media.title || "(no title)"}
               </p>
 
-              {media.owner ? (
-                <div className="flex items-center gap-2">
-                  {media.owner.avatar && (
-                    <img
-                      src={media.owner.avatar}
-                      alt=""
-                      className="w-6 h-6 rounded-full object-cover shrink-0"
-                    />
-                  )}
-                  <span className="text-xs text-base-content/60 truncate">
-                    {media.owner.nickname}{" "}
-                    <span className="opacity-60">@{media.owner.username}</span>
+              {/* Author */}
+              {media.author_meta?.uniqueId ? (
+                <p className="text-xs text-base-content/60 truncate">
+                  {media.author_meta.name}{" "}
+                  <span className="opacity-60">
+                    @{media.author_meta.uniqueId}
                   </span>
-                </div>
-              ) : authorLine ? (
-                <p className="text-xs text-base-content/60">{authorLine}</p>
+                </p>
+              ) : media.author ? (
+                <p className="text-xs text-base-content/60">{media.author}</p>
               ) : null}
 
-              {media.stats && (
-                <div className="flex gap-2 flex-wrap">
-                  {media.stats.plays != null && (
-                    <span className="badge badge-ghost badge-sm">
-                      {media.stats.plays.toLocaleString()} plays
-                    </span>
-                  )}
-                  {media.stats.likes != null && (
-                    <span className="badge badge-ghost badge-sm">
-                      {media.stats.likes.toLocaleString()} likes
-                    </span>
-                  )}
-                  {media.stats.comments != null && (
-                    <span className="badge badge-ghost badge-sm">
-                      {media.stats.comments.toLocaleString()} comments
-                    </span>
-                  )}
-                  {media.stats.shares != null && (
-                    <span className="badge badge-ghost badge-sm">
-                      {media.stats.shares.toLocaleString()} shares
-                    </span>
-                  )}
-                </div>
-              )}
-
-              <span className="badge badge-outline badge-sm capitalize w-fit">
-                {media.type}
-              </span>
+              {/* video_id + duration badges */}
+              <div className="flex gap-2 flex-wrap">
+                {media.video_id && (
+                  <span className="badge badge-ghost badge-sm font-mono">
+                    ID: {media.video_id}
+                  </span>
+                )}
+                {media.duration != null && (
+                  <span className="badge badge-ghost badge-sm">
+                    {media.duration}s
+                  </span>
+                )}
+                <span className="badge badge-outline badge-sm capitalize">
+                  {media.type}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Download buttons */}
           <div className="flex gap-2 flex-wrap">
             {media.type === "video" && media.video && (
-              <a href={media.video} target="_blank" rel="noreferrer" className="btn btn-sm btn-primary">
+              <a
+                href={media.video}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-sm btn-primary"
+              >
                 Download Video
               </a>
             )}
             {media.type === "audio" && media.audio && (
-              <a href={media.audio} target="_blank" rel="noreferrer" className="btn btn-sm btn-secondary">
+              <a
+                href={media.audio}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-sm btn-secondary"
+              >
                 Download Audio
               </a>
             )}
             {media.audio && media.type !== "audio" && (
-              <a href={media.audio} target="_blank" rel="noreferrer" className="btn btn-sm btn-secondary">
+              <a
+                href={media.audio}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-sm btn-secondary"
+              >
                 Audio
               </a>
             )}
             {media.type === "photo" &&
               media.photos.map((src, i) => (
-                <a key={i} href={src} target="_blank" rel="noreferrer" className="btn btn-sm btn-accent">
+                <a
+                  key={i}
+                  href={src}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-sm btn-accent"
+                >
                   Photo {i + 1}
                 </a>
               ))}
             {media.links.map((link, i) => (
-              <a key={i} href={link} target="_blank" rel="noreferrer" className="btn btn-sm btn-ghost btn-outline">
+              <a
+                key={i}
+                href={link}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-sm btn-ghost btn-outline"
+              >
                 Link {i + 1}
               </a>
             ))}
@@ -186,7 +199,9 @@ export default function CakTest() {
 
           {/* Raw JSON */}
           <details className="collapse collapse-arrow bg-base-200">
-            <summary className="collapse-title text-sm font-medium">Raw JSON</summary>
+            <summary className="collapse-title text-sm font-medium">
+              Raw JSON
+            </summary>
             <div className="collapse-content">
               <pre className="text-xs overflow-x-auto whitespace-pre-wrap break-all">
                 {JSON.stringify(media, null, 2)}

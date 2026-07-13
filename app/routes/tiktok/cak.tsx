@@ -1,5 +1,7 @@
 // @ts-ignore
 import { getMedia } from "cakkatrok-tiktok-downloader";
+import { TikTokDownloader } from "tk4-downloader";
+import { parse as localParse } from "../../lib/parser";
 import type { ActionFunctionArgs } from "react-router";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -18,45 +20,48 @@ type CakMedia = {
   links: string[];
 };
 
-type RuhadOwner = { username: string; nickname: string; avatar: string };
-type RuhadStats = {
-  likes: number;
-  comments: number;
-  plays: number;
-  shares: number;
+export type Tk4Author = {
+  id: string | null;
+  name: string | null;
+  uniqueId: string | null;
 };
-type RuhadData = {
-  title: string;
-  thumbnail: string;
-  owner: RuhadOwner;
-  stats: RuhadStats;
+
+type Tk4Meta = {
+  id: string | null;
+  title: string | null;
+  duration: number | null;
+  author: Tk4Author;
+  thumbnails: string[];
 };
 
 export type MergedMedia = CakMedia & {
-  owner: RuhadOwner | null;
-  stats: RuhadStats | null;
+  video_id: string | null;
+  duration: number | null;
+  author_meta: Tk4Author | null;
 };
 
-// ─── Shared fetch helper ─────────────────────────────────────────────────────
+// ─── tk4 metadata helper ──────────────────────────────────────────────────────
 
-async function fetchRuhadMeta(videoUrl: string): Promise<RuhadData | null> {
+async function fetchTk4Meta(videoUrl: string): Promise<Tk4Meta | null> {
   try {
-    const mod: any = await import("rahad-all-downloader-v2");
-    const alldl = mod.default?.alldl ?? mod.alldl;
-    const result = await alldl.tiktok(videoUrl);
-    if (!result?.success || !result.data) return null;
-    return result.data as RuhadData;
+    const downloader = new TikTokDownloader({ debug: false });
+    const result = await downloader.downloadVideo(String(videoUrl));
+    const parsed = await localParse(result);
+    if (!parsed || parsed.error) return null;
+    return parsed as Tk4Meta;
   } catch {
     return null;
   }
 }
 
+// ─── Shared fetch helper ──────────────────────────────────────────────────────
+
 export async function fetchMediaWithMeta(
   videoUrl: string,
 ): Promise<MergedMedia> {
-  const [cakResult, ruhadResult] = await Promise.allSettled([
+  const [cakResult, tk4Result] = await Promise.allSettled([
     getMedia(videoUrl) as Promise<CakMedia>,
-    fetchRuhadMeta(videoUrl),
+    fetchTk4Meta(videoUrl),
   ]);
 
   if (cakResult.status === "rejected") {
@@ -64,14 +69,20 @@ export async function fetchMediaWithMeta(
   }
 
   const cak = cakResult.value;
-  const ruhad = ruhadResult.status === "fulfilled" ? ruhadResult.value : null;
+  const tk4 = tk4Result.status === "fulfilled" ? tk4Result.value : null;
+
+  // Prefer the last thumbnail from tk4 (highest quality), fall back to cak's
+  const tk4Thumb = tk4?.thumbnails?.length
+    ? tk4.thumbnails[tk4.thumbnails.length - 1]
+    : null;
 
   return {
     ...cak,
-    title: ruhad?.title || cak.title,
-    thumbnail: ruhad?.thumbnail || cak.thumbnail,
-    owner: ruhad?.owner ?? null,
-    stats: ruhad?.stats ?? null,
+    title: tk4?.title || cak.title,
+    thumbnail: tk4Thumb || cak.thumbnail,
+    video_id: tk4?.id ?? null,
+    duration: tk4?.duration ?? null,
+    author_meta: tk4?.author ?? null,
   };
 }
 
