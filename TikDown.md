@@ -216,6 +216,59 @@ Content-Type: application/json
 
 ---
 
+### `POST /tiktok/cak`
+
+Fetches media info and direct download URLs for a single TikTok video via the
+`cakkatrok-tiktok-downloader` library (no yt-dlp, no cookies required).
+Detects content type automatically — video, slideshow photos, or audio.
+Returns a single JSON object (not streamed).
+
+#### Request Body (JSON)
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `u`   | Yes      | Full TikTok video URL |
+
+#### Example
+
+```
+POST /tiktok/cak
+Content-Type: application/json
+
+{
+  "u": "https://www.tiktok.com/@user/video/7106594312292453675"
+}
+```
+
+#### Response Shape
+
+```json
+{
+  "ok": true,
+  "media": {
+    "status": true,
+    "source": "savetik",
+    "input": "https://www.tiktok.com/@user/video/7106594312292453675",
+    "title": "Video caption",
+    "author": "@username",
+    "thumbnail": "https://...",
+    "type": "video",
+    "video": "https://...mp4",
+    "audio": "https://...mp3",
+    "photos": [],
+    "links": ["https://..."]
+  }
+}
+```
+
+`type` is one of `"video"`, `"photo"`, or `"audio"`.
+For slideshow posts, `photos` contains an array of image URLs and `video` is `null`.
+
+> Note: this endpoint proxies through SaveTik (`savetik.io`) and does not use
+> yt-dlp or a session cookie. Use `/tiktok/download` if you need cookie auth.
+
+---
+
 ## Response Format (streaming endpoints)
 
 - **Content-Type:** `application/x-ndjson`
@@ -446,7 +499,7 @@ func fetchInstagram(username: String, sessionId: String, limit: Int = 20) async 
 
 ## Fetching Single Video (Non-Streaming)
 
-For `POST /tiktok/download`, `POST /facebook`, and `POST /tiktok/ruhad-api`, the response is a single JSON object containing full metadata and all available formats/URLs.
+For `POST /tiktok/download`, `POST /facebook`, `POST /tiktok/ruhad-api`, and `POST /tiktok/cak`, the response is a single JSON object containing full metadata and all available formats/URLs.
 
 ### JavaScript
 
@@ -490,6 +543,23 @@ async function fetchTikTokRuhad(videoUrl) {
   console.log('No-watermark URL:', data.download.no_watermark);
   return data;
 }
+
+// TikTok via cakkatrok-tiktok-downloader (no cookies, supports video/photo/audio)
+async function fetchTikTokCak(videoUrl) {
+  const res = await fetch('https://tik-down-backend.vercel.app/tiktok/cak', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ u: videoUrl }),
+  });
+
+  if (!res.ok) throw new Error((await res.json()).error);
+  const { media } = await res.json();
+  // media.type === 'video' | 'photo' | 'audio'
+  if (media.type === 'video') console.log('Video URL:', media.video);
+  if (media.type === 'photo') console.log('Photos:', media.photos);
+  if (media.type === 'audio') console.log('Audio URL:', media.audio);
+  return media;
+}
 ```
 
 ### Dart / Flutter
@@ -517,6 +587,22 @@ Future<Map<String, dynamic>> fetchFacebookVideo(String url, {String? cookies}) a
 
   if (res.statusCode != 200) throw Exception(jsonDecode(res.body)['error']);
   return jsonDecode(res.body);
+}
+
+// TikTok via cakkatrok-tiktok-downloader (no cookies, supports video/photo/audio)
+Future<Map<String, dynamic>> fetchTikTokCak(String videoUrl) async {
+  final uri = Uri.https('tik-down-backend.vercel.app', '/tiktok/cak');
+  final res = await http.post(
+    uri,
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'u': videoUrl}),
+  );
+
+  if (res.statusCode != 200) throw Exception(jsonDecode(res.body)['error']);
+  final body = jsonDecode(res.body) as Map<String, dynamic>;
+  final media = body['media'] as Map<String, dynamic>;
+  // media['type'] is 'video', 'photo', or 'audio'
+  return media;
 }
 ```
 

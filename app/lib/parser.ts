@@ -16,7 +16,7 @@ function parseTikTokHtml(html: string, resultId?: string): any {
   if (rehydrationMatch) {
     try {
       parsedJson = JSON.parse(rehydrationMatch[1]);
-    } catch {}
+    } catch { }
   }
 
   // 2. Try SIGI_STATE
@@ -25,7 +25,7 @@ function parseTikTokHtml(html: string, resultId?: string): any {
     if (sigiMatch) {
       try {
         parsedJson = JSON.parse(sigiMatch[1]);
-      } catch {}
+      } catch { }
     }
   }
 
@@ -123,7 +123,7 @@ export async function parse(result: any): Promise<any> {
       uniqueId: htmlData?.author?.uniqueId ?? null,
     },
     thumbnails,
-    raw: result,
+    // raw: result,
   };
 
   if (htmlData) {
