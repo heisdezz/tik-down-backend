@@ -30,8 +30,6 @@ export default function CakTest() {
     mutate(url.trim());
   };
 
-  const authorLine = media?.owner ? null : media?.author || null;
-
   return (
     <div className="container mx-auto py-6 max-w-3xl space-y-6 px-4">
       <h1 className="text-2xl font-bold">TikTok Test — cakkatrok</h1>
@@ -43,7 +41,7 @@ export default function CakTest() {
           </label>
           <input
             className="input input-bordered w-full"
-            placeholder="https://www.tiktok.com/@user/video/123..."
+            placeholder="https://www.tiktok.com/@user/video/123... or vt.tiktok.com/..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && run()}
@@ -96,51 +94,19 @@ export default function CakTest() {
                 {media.title || "(no title)"}
               </p>
 
-              {/* Author */}
-              {media.owner ? (
-                <div className="flex items-center gap-2">
-                  {media.owner.avatar && (
-                    <img
-                      src={media.owner.avatar}
-                      alt=""
-                      className="w-6 h-6 rounded-full object-cover shrink-0"
-                    />
-                  )}
-                  <span className="text-xs text-base-content/60 truncate">
-                    {media.owner.nickname}{" "}
-                    <span className="opacity-60">@{media.owner.username}</span>
+              {/* Author from tk4 */}
+              {media.author_meta?.uniqueId ? (
+                <p className="text-xs text-base-content/60 truncate">
+                  {media.author_meta.name}{" "}
+                  <span className="opacity-60">
+                    @{media.author_meta.uniqueId}
                   </span>
-                </div>
-              ) : authorLine ? (
-                <p className="text-xs text-base-content/60">{authorLine}</p>
+                </p>
+              ) : media.author ? (
+                <p className="text-xs text-base-content/60">{media.author}</p>
               ) : null}
 
-              {/* Stats */}
-              {media.stats && (
-                <div className="flex gap-2 flex-wrap">
-                  {media.stats.plays != null && (
-                    <span className="badge badge-ghost badge-sm">
-                      {media.stats.plays.toLocaleString()} plays
-                    </span>
-                  )}
-                  {media.stats.likes != null && (
-                    <span className="badge badge-ghost badge-sm">
-                      {media.stats.likes.toLocaleString()} likes
-                    </span>
-                  )}
-                  {media.stats.comments != null && (
-                    <span className="badge badge-ghost badge-sm">
-                      {media.stats.comments.toLocaleString()} comments
-                    </span>
-                  )}
-                  {media.stats.shares != null && (
-                    <span className="badge badge-ghost badge-sm">
-                      {media.stats.shares.toLocaleString()} shares
-                    </span>
-                  )}
-                </div>
-              )}
-
+              {/* Badges */}
               <div className="flex gap-2 flex-wrap">
                 <span className="badge badge-outline badge-sm capitalize">
                   {media.type}
@@ -148,6 +114,11 @@ export default function CakTest() {
                 {media.video_id && (
                   <span className="badge badge-ghost badge-sm font-mono">
                     ID: {media.video_id}
+                  </span>
+                )}
+                {media.duration != null && (
+                  <span className="badge badge-ghost badge-sm">
+                    {media.duration}s
                   </span>
                 )}
               </div>
